@@ -1,0 +1,9 @@
+numpy
+pandas-datareader
+pandas 
+scipy
+matplotlib
+seaborn
+pylint
+joblib
+dwave-ocean-sdk
