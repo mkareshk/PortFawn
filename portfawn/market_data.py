@@ -1,9 +1,11 @@
 import os
 import json
 import glob
-from datetime import datetime
-from pathlib import Path
 import logging
+from pathlib import Path
+import datetime
+
+# from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -22,8 +24,12 @@ class MarketData:
         self,
         asset_list: list,
         data_source: str = "yahoo",
-        date_start: datetime = datetime.strptime("2000-01-01", "%Y-%m-%d").date(),
-        date_end: datetime = datetime.strptime("2019-12-31", "%Y-%m-%d").date(),
+        date_start: datetime = datetime.datetime.strptime(
+            "2000-01-01", "%Y-%m-%d"
+        ).date(),
+        date_end: datetime = datetime.datetime.strptime(
+            "2019-12-31", "%Y-%m-%d"
+        ).date(),
         col_price: str = "Adj Close",
         path_data: Path = Path("data"),
     ) -> None:
@@ -33,22 +39,47 @@ class MarketData:
         self.data_source = data_source
         self.date_start = date_start
         self.date_end = date_end
-        self.business_day_num = int(np.busday_count(date_start, date_end))
         self.col_price = col_price
         self.path_data = path_data
 
         # logging
         self.logger = logging.getLogger(__name__)
 
+        # making the dates standard
+        if type(date_start) != type(date_end):
+            raise ValueError(
+                f"date_start ({type(date_start)}) and "
+                f"date_end ({type(date_end)}) should have the same types"
+            )
+        elif isinstance(self.date_start, str) and isinstance(self.date_end, str):
+            self.date_str_start = self.date_start
+            self.date_str_end = self.date_end
+            self.date_start = datetime.strptime(self.date_start, "%Y-%m-%d").date()
+            self.date_end = datetime.strptime(self.date_end, "%Y-%m-%d").date()
+        elif isinstance(self.date_start, datetime.date) and isinstance(
+            self.date_end, datetime.date
+        ):
+            self.date_start = self.date_start
+            self.date_end = self.date_end
+            self.date_str_start = self.date_start.strftime("%Y-%m-%d")
+            self.date_str_end = self.date_start.strftime("%Y-%m-%d")
+        else:
+            raise ValueError(
+                "date_start and date_end types should be either datetime.date "
+                "or str (e.g. '2014-03-24')"
+            )
+
+        self.business_day_num = int(np.busday_count(date_start, date_end))
+
         self.logger.info(
-            f"Start collecting market data from ({date_start.strftime('%Y-%m-%d')} "
-            f"to {date_end.strftime('%Y-%m-%d')}, "
+            f"Start collecting market data from ({self.date_str_start} "
+            f"to {self.date_str_end}, "
             f"{self.business_day_num} business days) for {len(asset_list)} assets: {self.asset_list}"
         )
 
         # raw data
         self.market_data_sig = get_assets_signature(
-            asset_list=self.asset_list, start=date_start, end=date_end
+            asset_list=self.asset_list, start=self.date_str_start, end=self.date_str_end
         )
         self.price_df = self.retrieve_raw_data()
         self.logger.info(
@@ -58,12 +89,14 @@ class MarketData:
         # returns
         self.freq_dict = get_freq_list()
         self.metrics = ["returns", "mean", "std", "cov", "corr", "cum", "total_return"]
-        self.market = self.calc_asset_returns()
-        del self.price_df
+        self.market_metrics = self.calc_market_metrics()
         self.logger.info(
-            f"The metrics on {self.market.keys()} are calculated for "
-            f"{len(self.market['D']['returns'].columns)} assets"
+            f"The metrics on {self.market_metrics.keys()} are calculated for "
+            f"{len(self.market_metrics['D']['returns'].columns)} assets"
         )
+
+    def get_data(self, freq="D", metric="returns"):
+        return self.market_metrics[freq][metric]
 
     def retrieve_raw_data(self):
 
@@ -77,8 +110,8 @@ class MarketData:
             filename = Path(price_file).stem.replace("price_", "")
             filename_split = filename.split("___")
             if len(filename_split) == 3:
-                start = datetime.strptime(filename_split[0], "%Y-%m-%d").date()
-                end = datetime.strptime(filename_split[1], "%Y-%m-%d").date()
+                start = datetime.datetime.strptime(filename_split[0], "%Y-%m-%d").date()
+                end = datetime.datetime.strptime(filename_split[1], "%Y-%m-%d").date()
                 asset_sig = filename_split[2]
                 if (
                     asset_sig == get_asset_hash(self.asset_list)
@@ -108,15 +141,15 @@ class MarketData:
 
         return price_df
 
-    def calc_asset_returns(self):
-        asset_returns = {}
+    def calc_market_metrics(self):
+        market_metrics = {}
         for freq_key in self.freq_dict.keys():
-            data = self.calc_asset_returns_by_freq(resample_freq=freq_key)
+            data = self.calc_market_metrics_by_freq(resample_freq=freq_key)
             if data:
-                asset_returns.update({freq_key: data})
-        return asset_returns
+                market_metrics.update({freq_key: data})
+        return market_metrics
 
-    def calc_asset_returns_by_freq(self, resample_freq="M"):
+    def calc_market_metrics_by_freq(self, resample_freq="M"):
         market = {}
         market["returns"] = self.price_df.resample(resample_freq).mean().pct_change()
         market["returns"].dropna(inplace=True)
@@ -166,14 +199,14 @@ class PlotMarketData:
         for freq_key in self.market_data.freq_dict.keys():
 
             # do not plot empty DFs
-            if freq_key not in self.market_data.market.keys():
+            if freq_key not in self.market_data.market_metrics.keys():
                 continue
 
             f_name = self.market_data.freq_dict[freq_key]
             f_name_cap = f_name.capitalize()
             # box
             self.plot.plot_box(
-                returns=self.market_data.market[freq_key]["returns"],
+                returns=self.market_data.get_data(freq=freq_key, metric="returns"),
                 title=f"Distribution of {f_name_cap} Returns",
                 xlabel="Assets",
                 ylabel=f"{f_name_cap} Returns",
@@ -181,27 +214,27 @@ class PlotMarketData:
             )
             # heatmap
             self.plot.plot_heatmap(
-                self.market_data.market[freq_key]["cov"],
+                self.market_data.get_data(freq=freq_key, metric="cov"),
                 "cov",
                 f"Covariance of {f_name_cap} returns",
                 f"asset_cov_{f_name}_returns_assets",
             )
             self.plot.plot_heatmap(
-                self.market_data.market[freq_key]["corr"],
+                self.market_data.get_data(freq=freq_key, metric="corr"),
                 "corr",
                 f"Correlation of {f_name_cap} returns",
                 f"asset_corr_{f_name}_returns_assets",
             )
             # trends
             self.plot.plot_trend(
-                returns=self.market_data.market[freq_key]["returns"],
+                returns=self.market_data.get_data(freq=freq_key, metric="returns"),
                 title=f"{f_name_cap} Asset Returns",
                 xlabel="Date",
                 ylabel=f"{f_name_cap} Returns",
                 filename=f"asset_trend_{f_name}_returns_assets",
             )
             self.plot.plot_trend(
-                returns=self.market_data.market[freq_key]["cum"],
+                returns=self.market_data.get_data(freq=freq_key, metric="cum"),
                 title=f"{f_name_cap} Cumulative Asset Returns",
                 xlabel="Date",
                 ylabel=f"Cumulative Returns",
@@ -233,9 +266,9 @@ class PlotMarketData:
         path_returns = self.path_results / "returns"
         path_returns.mkdir(parents=True, exist_ok=True)
         for freq_key in self.market_data.freq_dict.keys():
-            if freq_key not in self.market_data.market.keys():
+            if freq_key not in self.market_data.market_metrics.keys():
                 continue
             for metric in self.market_data.metrics:
                 f_name = self.market_data.freq_dict[freq_key]
                 file = path_returns / Path(f"asset_{metric}_{f_name}.csv")
-                self.market_data.market[freq_key][metric].to_csv(file)
+                self.market_data.get_data(freq=freq_key, metric=metric).to_csv(file)

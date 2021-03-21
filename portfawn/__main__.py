@@ -28,7 +28,7 @@ def main():
     us_stocks = ["MGC", "VV", "VO", "VB"]
     int_stocks = ["VEU", "VWO"]
     asset_list = us_bonds + us_stocks + int_stocks
-    start = datetime.strptime("2010-01-01", "%Y-%m-%d").date()
+    start = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
     end = datetime.strptime("2020-12-31", "%Y-%m-%d").date()
     training_days = 22
     testing_days = 5

@@ -64,7 +64,9 @@ class Portfolio:
 
             # claculate the expected returns and risks
             expected_stats = ExpectedStats(
-                returns=self.market_data.market[self.return_type]["returns"],
+                returns_data=self.market_data.get_data(
+                    freq=self.return_type, metric="returns"
+                ),
                 optimization_type=self.name,
             )
             mean, cov = expected_stats.expected_mean_cov(
@@ -106,8 +108,8 @@ class Portfolio:
             {
                 "portfolio_asset_daily_return": pd.concat(
                     [
-                        self.market_data.market["D"]["returns"],
-                        self.market_data.market["D"]["returns"].dot(w)[0],
+                        self.market_data.get_data(freq="D", metric="returns"),
+                        self.market_data.get_data(freq="D", metric="returns").dot(w)[0],
                     ],
                     axis=1,
                 )
@@ -151,8 +153,10 @@ class Portfolio:
             {
                 "portfolio_asset_total_return": pd.concat(
                     [
-                        self.market_data.market["D"]["total_return"],
-                        self.market_data.market["D"]["total_return"].dot(w),
+                        self.market_data.get_data(freq="D", metric="total_return"),
+                        self.market_data.get_data(freq="D", metric="total_return").dot(
+                            w
+                        ),
                     ],
                     axis=1,
                 )
