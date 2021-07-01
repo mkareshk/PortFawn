@@ -8,12 +8,15 @@ from dwave.system import DWaveSampler, EmbeddingComposite
 
 
 class PortfolioOptimization:
-    def __init__(self, returns_mean, returns_cov, risk_free_rate):
-        self.returns_mean = returns_mean
-        self.returns_cov = returns_cov
-        self.risk_free_rate = risk_free_rate
-        self.asset_num = self.returns_mean.shape[0]
-        self.optimization_option = {"maxiter": 1000, "disp": False, "ftol": 1e-10}
+    def __init__(self, portfolio_name):
+        self.portfolio_name = portfolio_name
+        self.optimization_params = {"maxiter": 1000, "disp": False, "ftol": 1e-10}
+
+    def optimize(self, expected_return, expected_risk, risk_free_rate):
+
+        if self.portolio_name == 'equal':
+            return np.ones((len(expected_return.columns), 1))
+
 
     def calc_performance(self, weights, returns_mean, returns_cov):
         performance = {}
