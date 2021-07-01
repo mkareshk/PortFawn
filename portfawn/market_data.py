@@ -9,8 +9,7 @@ import datetime
 
 import numpy as np
 import pandas as pd
-import pandas_datareader.data as web
-
+import pandas_datareader as pdr
 from portfawn.plot import Plot
 from portfawn.utils import (
     get_asset_hash,
@@ -126,12 +125,13 @@ class MarketData:
 
         file_price = self.path_data / Path(f"price_{self.market_data_sig}.pkl")
 
-        raw_df = web.DataReader(
-            name=self.asset_list,
-            data_source=self.data_source,
+        raw_df = pdr.get_data_tiingo(
+            self.asset_list,
             start=self.date_start,
             end=self.date_end,
+            api_key = ''
         )
+
         raw_df.dropna(inplace=True)
         col_names = [(self.col_price, ticker) for ticker in self.asset_list]
         price_df = raw_df[col_names]
