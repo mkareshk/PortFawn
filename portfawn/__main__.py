@@ -62,8 +62,7 @@ def main():
         path_data=Path("data"),
         path_results=Path("results"),
     )
-    portfolio_backtesting.analyze()
-    portfolio_backtesting.plot()
+    portfolio_backtesting.run()
 
 
 def demo_data_market():
