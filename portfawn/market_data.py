@@ -5,11 +5,12 @@ import logging
 from pathlib import Path
 import datetime
 
-# from datetime import datetime
+import yfinance as yf
 
 import numpy as np
 import pandas as pd
-import pandas_datareader as pdr
+
+# import pandas_datareader as pdr
 from portfawn.plot import Plot
 from portfawn.utils import (
     get_asset_hash,
@@ -29,7 +30,7 @@ class MarketData:
         date_end: datetime = datetime.datetime.strptime(
             "2019-12-31", "%Y-%m-%d"
         ).date(),
-        col_price: str = "Adj Close",
+        col_price: str = "Close",
         path_data: Path = Path("data"),
     ) -> None:
 
@@ -125,13 +126,14 @@ class MarketData:
 
         file_price = self.path_data / Path(f"price_{self.market_data_sig}.pkl")
 
-        raw_df = pdr.get_data_tiingo(
-            self.asset_list,
-            start=self.date_start,
-            end=self.date_end,
-            api_key = ''
-        )
+        # raw_df = pdr.get_data_tiingo(
+        #     self.asset_list,
+        #     start=self.date_start,
+        #     end=self.date_end,
+        #     api_key = ''
+        # )
 
+        raw_df = yf.Tickers(self.asset_list).history(period="max")
         raw_df.dropna(inplace=True)
         col_names = [(self.col_price, ticker) for ticker in self.asset_list]
         price_df = raw_df[col_names]
@@ -140,6 +142,10 @@ class MarketData:
         price_df.to_pickle(file_price)
 
         return price_df
+
+    @property
+    def data_returns(self):
+        return self.price_df
 
     def calc_market_metrics(self):
         market_metrics = {}

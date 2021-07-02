@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class Portfolio:
-    def __init__(self, portfolio_name, data_returns, asset_weights=None, risk_free_rate=0.0):
+    def __init__(
+        self, portfolio_name, data_returns, asset_weights=None, risk_free_rate=0.0
+    ):
         # args
         self.portfolio_name = portfolio_name
         self.data_returns = data_returns
@@ -25,20 +27,29 @@ class Portfolio:
 
         # other params
         self.asset_list = list(data_returns.columns)
-        self.date_start = data_returns.iloc[0]['date']
-        self.date_end = data_returns.iloc[-1]['date']
+
+        self.date_start = data_returns.index[0]
+        self.date_end = data_returns.index[-1]
 
         self.optimizer = PortfolioOptimization(portfolio_name=portfolio_name)
 
     def optimize(self):
         if self.asset_weights:
-            raise Exception(f"The portfolio weights have already set, {self.asset_weights}")
+            raise Exception(
+                f"The portfolio weights have already set, {self.asset_weights}"
+            )
 
-        expected_stats = ExpectedStats(data_returns=self.data_returns, state_type='simple')
+        expected_stats = ExpectedStats(
+            data_returns=self.data_returns, state_type="simple"
+        )
         expected_return = expected_stats.expected_return
         expected_risk = expected_stats.expected_risk
 
-        self.weights = self.optimizer.optimize(expected_return=expected_return, expected_risk=expected_risk, risk_free_rate=self.risk_free_rate)
+        self.weights = self.optimizer.optimize(
+            expected_return=expected_return,
+            expected_risk=expected_risk,
+            risk_free_rate=self.risk_free_rate,
+        )
 
         return {self.asset_list[ind]: float(w) for ind, w in enumerate(self.weights)}
 
@@ -47,16 +58,26 @@ class Portfolio:
 
         performance = {}
 
-        performance.update({f"{self.portfolio_name}_daily_return": self.data_returns.mean().dot(w)})
+        performance.update(
+            {f"{self.portfolio_name}_daily_return": self.data_returns.mean().dot(w)}
+        )
 
         return performance
 
 
 class PortfolioBackTesting:
-
     def __init__(
-            self, asset_list, portfolio_names, start_date_analysis, end_date_analysis, training_days, testing_days, risk_free_rate=0.0, path_data=Path("data"),
-            path_results=Path("results")):
+        self,
+        asset_list,
+        portfolio_names,
+        start_date_analysis,
+        end_date_analysis,
+        training_days,
+        testing_days,
+        risk_free_rate=0.0,
+        path_data=Path("data"),
+        path_results=Path("results"),
+    ):
         # parameters
         self.asset_list = asset_list
         self.portfolio_names = portfolio_names
@@ -69,60 +90,104 @@ class PortfolioBackTesting:
         self.path_results = path_results
 
         # creating the time windows
-        self.analysis_range = pd.date_range(start=self.start_date_analysis,
-                                            end=self.end_date_analysis,
-                                            freq=f"{self.testing_days}D")
+        self.analysis_range = pd.date_range(
+            start=self.start_date_analysis,
+            end=self.end_date_analysis,
+            freq=f"{self.testing_days}D",
+        )
 
         # each window: (the first day of training, the reference day, the last day of testing)
         self.training_delta = pd.Timedelta(self.training_days, unit="d")
         self.testing_delta = pd.Timedelta(self.testing_days, unit="d")
-        self.analysis_windows = [(i.date() - self.training_delta, i.date(), i.date() + self.testing_delta)
-                                 for i in self.analysis_range]
+        self.analysis_windows = [
+            (i.date() - self.training_delta, i.date(), i.date() + self.testing_delta)
+            for i in self.analysis_range
+        ]
 
         # market data
-        self.market_data = MarketData(asset_list=self.asset_list, date_start=self.start_date_analysis,
-                                      date_end=self.end_date_analysis)
+        self.market_data = MarketData(
+            asset_list=self.asset_list,
+            date_start=self.start_date_analysis,
+            date_end=self.end_date_analysis,
+        )
         self.data_returns = self.market_data.data_returns
 
     def run(self):
-        return [self.run_iter(**instance) for instance in self.get_portfolio_instances()]
+        return [
+            self.run_iter(**instance) for instance in self.get_portfolio_instances()
+        ]
 
     def get_portfolio_instances(self):
-        return [dict(portfolio_name=portfolio_name, date_start_training=window[0], date_end_training=window[1],
-                     date_start_testing=window[1], date_end_testing=window[2])
-                for window in self.analysis_windows
-                for portfolio_name in self.portfolio_names]
+        return [
+            dict(
+                portfolio_name=portfolio_name,
+                date_start_training=window[0],
+                date_end_training=window[1],
+                date_start_testing=window[1],
+                date_end_testing=window[2],
+            )
+            for window in self.analysis_windows
+            for portfolio_name in self.portfolio_names
+        ]
 
-    def run_iter(self, portfolio_name, date_start_training, date_end_training, date_start_testing, date_end_testing):
-        profile_training = self.train(portfolio_name=portfolio_name, date_start_training=date_start_training,
-                                      date_end_training=date_end_training)
-        logger.info(f"Trained {portfolio_name} portfolio from {date_start_training} to {date_end_training}")
+    def run_iter(
+        self,
+        portfolio_name,
+        date_start_training,
+        date_end_training,
+        date_start_testing,
+        date_end_testing,
+    ):
+        profile_training = self.train(
+            portfolio_name=portfolio_name,
+            date_start_training=date_start_training,
+            date_end_training=date_end_training,
+        )
+        logger.info(
+            f"Trained {portfolio_name} portfolio from {date_start_training} to {date_end_training}"
+        )
 
-        profile_testing = self.test(portfolio_name=portfolio_name, asset_weights=profile_training["asset_weights"],
-                                    date_start_testing=date_start_testing, date_end_testing=date_end_testing)
+        profile_testing = self.test(
+            portfolio_name=portfolio_name,
+            asset_weights=profile_training["asset_weights"],
+            date_start_testing=date_start_testing,
+            date_end_testing=date_end_testing,
+        )
         logger.info(f"Tested portfolio from {date_start_testing} to {date_end_testing}")
 
         return dict(profile_training=profile_training, profile_testing=profile_testing)
 
     def train(self, portfolio_name, date_start_training, date_end_training):
         data_returns = self.data_returns.loc[date_start_training:date_end_training, :]
-        portfolio_training = Portfolio(portfolio_name=portfolio_name, data_returns=data_returns, risk_free_rate=self.risk_free_rate)
+        portfolio_training = Portfolio(
+            portfolio_name=portfolio_name,
+            data_returns=data_returns,
+            risk_free_rate=self.risk_free_rate,
+        )
         portfolio_training.optimize()
 
         return self.portfolio_profile(portfolio_training)
 
     def test(self, portfolio_name, asset_weights, date_start_testing, date_end_testing):
         data_returns = self.data_returns.loc[date_start_testing:date_end_testing, :]
-        portfolio_testing = Portfolio(portfolio_name=portfolio_name, data_returns=data_returns,
-                                      asset_weights=asset_weights, risk_free_rate=self.risk_free_rate)
+        portfolio_testing = Portfolio(
+            portfolio_name=portfolio_name,
+            data_returns=data_returns,
+            asset_weights=asset_weights,
+            risk_free_rate=self.risk_free_rate,
+        )
         return self.portfolio_profile(portfolio_testing)
 
     @staticmethod
     def portfolio_profile(portfolio):
         portfolio.evaluate()
 
-        result = dict(portfolio_name=portfolio.portfolio_name, date_start=portfolio.date_start,
-                      date_end=portfolio.data_end, asset_weights=portfolio.asset_weights)
+        result = dict(
+            portfolio_name=portfolio.portfolio_name,
+            date_start=portfolio.date_start,
+            date_end=portfolio.data_end,
+            asset_weights=portfolio.asset_weights,
+        )
         result.update(portfolio.asset_performance)
 
         return result
@@ -155,11 +220,11 @@ class PortfolioBackTesting:
 
         portfolio_analysis_plot.plot_box(
             self.result_returns.loc[
-            :, self.result_returns.columns.str.contains("portfolio")
+                :, self.result_returns.columns.str.contains("portfolio")
             ].rename(
                 columns=lambda x: x.replace("portfolio_total_return_", "")
-                    .replace("_", " ")
-                    .capitalize()
+                .replace("_", " ")
+                .capitalize()
             ),
             title="Distribution of Total Returns for Different Portfolio Types",
             xlabel="Portfolio Types",
@@ -217,9 +282,9 @@ class PlotPortfolio:
         p_type_cap = p_type.capitalize()
         returns = (
             self.portfolio.performance["portfolio_asset_daily_return"]
-                .resample("M")
-                .mean()
-                .pct_change()
+            .resample("M")
+            .mean()
+            .pct_change()
         )
         cum = self.portfolio.performance["portfolio_asset_daily_cum"]
         # box
