@@ -3,6 +3,7 @@ from datetime import datetime
 import logging
 
 import numpy as np
+from numpy.random import random
 import pandas as pd
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
@@ -28,18 +29,20 @@ def main():
     us_stocks = ["MGC", "VV", "VO", "VB"]
     int_stocks = ["VEU", "VWO"]
     asset_list = us_bonds + us_stocks + int_stocks
+    asset_list = ["BND", "GLD", "SPY"]
     start = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
-    end = datetime.strptime("2020-12-31", "%Y-%m-%d").date()
+    end = datetime.strptime("2020-01-30", "%Y-%m-%d").date()
     training_days = 22
     testing_days = 5
     risk_free_rate = 0.0
     portfolio_names = [
         "equal",
-        "min_variance",
-        "max_return",
-        "max_sharpe_ratio",
-        "binary_qpu",
-        "binary_sa",
+        "random"
+        # "min_variance",
+        # "max_return",
+        # "max_sharpe_ratio",
+        # "binary_qpu",
+        # "binary_sa",
     ]
 
     # download the data

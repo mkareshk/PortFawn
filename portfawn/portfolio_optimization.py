@@ -15,8 +15,16 @@ class PortfolioOptimization:
 
     def optimize(self, expected_return, expected_risk, risk_free_rate):
 
+        shape = (len(expected_return), 1)
+
         if self.portfolio_name == "equal":
-            return np.ones((len(expected_return.columns), 1))
+            return self.normalized(np.ones(shape))
+        elif self.portfolio_name == "random":
+
+            return self.normalized(np.random.randint(low=0, high=100, size=shape))
+
+    def normalized(self, w):
+        return w / np.sum(w)
 
     # def calc_performance(self, weights, returns_mean, returns_cov):
     #     performance = {}
