@@ -1,9 +1,7 @@
 numpy
-pandas-datareader
-pandas 
 scipy
 matplotlib
 seaborn
-pylint
+pandas
 joblib
-dwave-ocean-sdk
+yfinance
