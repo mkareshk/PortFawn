@@ -20,11 +20,11 @@ pylab.rcParams.update(params)
 
 
 class Plot:
-    def __init__(self, asset_num=0, path_results="", plot_type="portfolio"):
+    def __init__(self, asset_num=0, path_plot="", plot_type="portfolio"):
 
         # parameters
         self.asset_num = asset_num
-        self.path_results = path_results
+        self.path_plot = path_plot
         self.plot_type = plot_type
 
         # styles
@@ -69,8 +69,8 @@ class Plot:
         locs, labels = plt.xticks()
         plt.xticks(locs, self.normalize_label(labels), rotation=45)
         plt.tight_layout()
-        plt.savefig(self.path_results / Path(filename + ".png"))
-        plt.savefig(self.path_results / Path(filename + ".pdf"))
+        plt.savefig(self.path_plot / Path(filename + ".png"))
+        plt.savefig(self.path_plot / Path(filename + ".pdf"))
         plt.clf()
         plt.close("all")
 
@@ -108,8 +108,8 @@ class Plot:
 
         plt.title(title)
         plt.tight_layout()
-        plt.savefig(self.path_results / Path(filename + ".png"))
-        plt.savefig(self.path_results / Path(filename + ".pdf"))
+        plt.savefig(self.path_plot / Path(filename + ".png"))
+        plt.savefig(self.path_plot / Path(filename + ".pdf"))
         plt.clf()
         plt.close("all")
 
@@ -147,8 +147,8 @@ class Plot:
         plt.legend(current_handles, self.normalize_label(current_labels))
         plt.tight_layout()
         plt.grid(True)
-        plt.savefig(self.path_results / Path(filename + ".png"))
-        plt.savefig(self.path_results / Path(filename + ".pdf"))
+        plt.savefig(self.path_plot / Path(filename + ".png"))
+        plt.savefig(self.path_plot / Path(filename + ".pdf"))
         plt.clf()
         plt.close("all")
 
@@ -176,8 +176,8 @@ class Plot:
         )
 
         plt.tight_layout()
-        plt.savefig(self.path_results / Path(filename + ".png"))
-        plt.savefig(self.path_results / Path(filename + ".pdf"))
+        plt.savefig(self.path_plot / Path(filename + ".png"))
+        plt.savefig(self.path_plot / Path(filename + ".pdf"))
         plt.clf()
         plt.close("all")
 

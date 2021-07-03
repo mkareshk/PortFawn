@@ -2,16 +2,7 @@ from pathlib import Path
 from datetime import datetime
 import logging
 
-import numpy as np
-from numpy.random import random
-import pandas as pd
-import matplotlib.pyplot as plt
-from joblib import Parallel, delayed
-
-from portfawn.portfolio import Portfolio, PortfolioBackTesting, PlotPortfolio
-from portfawn.plot import Plot
-from portfawn.utils import remove_one_asset_portfolio
-from portfawn.market_data import MarketData, PlotMarketData
+from portfawn.portfolio import PortfolioBackTesting
 
 logging.basicConfig(
     format="[%(levelname)s] [%(asctime)s] (%(name)s): %(message)s",
@@ -35,7 +26,7 @@ def main():
     training_days = 22
     testing_days = 5
     risk_free_rate = 0.0
-    portfolio_names = [
+    portfolio_types = [
         "equal",
         "random"
         # "min_variance",
@@ -44,19 +35,15 @@ def main():
         # "binary_qpu",
         # "binary_sa",
     ]
-
-    # download the data
-    market_data = MarketData(
-        asset_list=asset_list,
-        date_start=start - pd.Timedelta(training_days, unit="d"),
-        date_end=end + pd.Timedelta(testing_days, unit="d"),
-    )
-    PlotMarketData(market_data)
+    sampling_methods = ["simple"]
+    optimization_methods = ["equal", "random"]
 
     # backtesting
     portfolio_backtesting = PortfolioBackTesting(
         asset_list=asset_list,
-        portfolio_names=portfolio_names,
+        portfolio_types=portfolio_types,
+        sampling_methods=sampling_methods,
+        optimization_methods=optimization_methods,
         start_date_analysis=start,
         end_date_analysis=end,
         training_days=training_days,
@@ -68,21 +55,5 @@ def main():
     portfolio_backtesting.run()
 
 
-def demo_data_market():
-    us_bonds = ["BLV", "BIV", "BSV", "VCLT", "VCIT", "VCSH"]
-    us_stocks = ["MGC", "VV", "VO", "VB"]
-    int_stocks = ["VEU", "VWO"]
-    asset_list = us_bonds + us_stocks + int_stocks
-    date_start = datetime.strptime("2010-01-01", "%Y-%m-%d").date()
-    date_end = datetime.strptime("2019-12-31", "%Y-%m-%d").date()
-
-    market_data = MarketData(
-        asset_list=asset_list, date_start=date_start, date_end=date_end
-    )
-
-    PlotMarketData(market_data)
-
-
 if __name__ == "__main__":
     main()
-    # demo_data_market()

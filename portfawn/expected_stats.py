@@ -1,17 +1,17 @@
 class ExpectedStats:
-    def __init__(self, data_returns, state_type):
+    def __init__(self, data_returns, sampling_method):
 
         self.data_returns = data_returns
-        self.state_type = state_type
+        self.sampling_method = sampling_method
 
     @property
     def expected_return(self):
 
-        if self.state_type == 'simple':
+        if self.sampling_method == "simple":
             return self.data_returns.mean()
 
     @property
     def expected_risk(self):
 
-        if self.state_type == 'simple':
+        if self.sampling_method == "simple":
             return self.data_returns.std()

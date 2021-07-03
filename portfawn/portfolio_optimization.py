@@ -9,17 +9,17 @@ import scipy.optimize as sco
 
 
 class PortfolioOptimization:
-    def __init__(self, portfolio_name):
-        self.portfolio_name = portfolio_name
+    def __init__(self, optimization_method):
+        self.optimization_method = optimization_method
         self.optimization_params = {"maxiter": 1000, "disp": False, "ftol": 1e-10}
 
     def optimize(self, expected_return, expected_risk, risk_free_rate):
 
         shape = (len(expected_return), 1)
 
-        if self.portfolio_name == "equal":
+        if self.optimization_method == "equal":
             return self.normalized(np.ones(shape))
-        elif self.portfolio_name == "random":
+        elif self.optimization_method == "random":
 
             return self.normalized(np.random.randint(low=0, high=100, size=shape))
 
