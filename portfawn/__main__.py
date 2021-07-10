@@ -23,7 +23,7 @@ def main():
     int_stocks = ["VEU", "VWO"]
     asset_list = us_bonds + us_stocks + int_stocks
 
-    start_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
+    start_date = datetime.strptime("2010-01-01", "%Y-%m-%d").date()
     end_date = datetime.strptime("2020-01-30", "%Y-%m-%d").date()
 
     training_days = 22
@@ -32,11 +32,11 @@ def main():
     risk_free_rate = 0.0
 
     portfolio_types = [
-        "equal",
-        "random",
-        "min_variance",
-        "max_return",
-        "max_sharpe_ratio",
+        "Equal",
+        "Random",
+        "MV",
+        "MR",
+        "MSR",
         # "binary_qpu",
         # "binary_sa",
     ]

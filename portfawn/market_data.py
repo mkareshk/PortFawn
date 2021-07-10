@@ -141,24 +141,18 @@ class MarketDataAnalysis:
             self.returns_data,
             "cov",
             "Covariance of Daily returns",
+            False,
             "asset_cov_daily",
         )
         self.plot.plot_heatmap(
             self.returns_data,
             "corr",
             "Correlation of Daily returns",
+            False,
             "asset_corr_daily",
         )
 
         # daily returns
-        self.plot.plot_trend(
-            returns=self.returns_data,
-            title="Asset Returns",
-            xlabel="Date",
-            ylabel="Daily Returns",
-            filename="asset__daily_returns",
-        )
-
         self.returns_data_cum = (self.returns_data + 1).cumprod() - 1
         self.plot.plot_trend(
             returns=self.returns_data_cum,

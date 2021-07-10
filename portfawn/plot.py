@@ -62,7 +62,13 @@ class Plot:
             patch_artist=True,
             boxprops=dict(facecolor="royalblue", color="black"),
             medianprops=dict(linestyle="-", linewidth=2.5, color="khaki"),
+            figsize=(8, 8),
         )
+
+        t = returns.to_numpy()
+        t = t[t > 0]
+        plt.yscale("symlog", linthresh=min(t))
+
         plt.xlabel(xlabel)
         plt.grid(True, axis="y")
         locs, labels = plt.xticks()
@@ -73,37 +79,45 @@ class Plot:
         plt.clf()
         plt.close("all")
 
-    def plot_heatmap(self, returns, relation_type, title="", filename=""):
+    def plot_heatmap(
+        self, returns, relation_type, title="", annotate=True, filename=""
+    ):
 
         if relation_type == "corr":
             relations = returns.corr()
-            annot_fmt = "0.2f"
-            shift = 0
+            annot_fmt = "0.1f"
+            shift = 1
             vmin, vmax = -1, 1
         elif relation_type == "cov":
             relations = returns.cov()
-            annot_fmt = "0.2f"
-            shift = 0
+            annot_fmt = "0.1g"
+            shift = 1
             vmin, vmax = relations.min().min(), relations.max().max()
+
+        mask = np.zeros_like(relations)
+        mask[np.triu_indices_from(mask, k=shift)] = True
 
         sns.heatmap(
             relations,
             cmap="RdYlGn",
+            mask=mask,
             xticklabels=relations.columns,
             yticklabels=relations.columns,
-            annot=True,
+            annot=annotate,
             fmt=annot_fmt,
-            annot_kws={"fontsize": 14},
+            annot_kws={"fontsize": 12},
             vmin=vmin,
             vmax=vmax,
         )
 
         if relation_type == "corr":
             locs, labels = plt.xticks()
-            plt.xticks(locs[0:], labels[0:])
+            plt.xticks(locs, labels)
             locs, labels = plt.yticks()
-            plt.yticks(locs[1:], labels[1:])
+            plt.yticks(locs, labels)
 
+        plt.xticks(rotation=45)
+        plt.yticks(rotation=45)
         plt.title(title)
         plt.tight_layout()
         plt.savefig(self.path_plot / Path(filename + ".png"))
@@ -141,7 +155,7 @@ class Plot:
     def plot_bar(
         self,
         returns,
-        yscale="linear",
+        yscale="log",
         title="",
         legend_title="",
         xlabel="",

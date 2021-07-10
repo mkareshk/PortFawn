@@ -198,7 +198,7 @@ class BackTesting:
         date_start_testing,
         date_end_testing,
     ):
-
+        print(date_start_testing)
         # training
         t0 = time.time()
 
@@ -245,11 +245,6 @@ class BackTesting:
                 "date": date_start_testing.strftime("%Y/%m/%d"),
                 "execution_time": testing_time,
             }
-        )
-
-        result_iter = dict(
-            profile_training=profile_training,
-            profile_testing=profile_testing,
         )
 
         return dict(profile_training=profile_training, profile_testing=profile_testing)
@@ -378,20 +373,12 @@ class BackTestAnalysis:
             filename="portfolio_dist",
         )
 
-        plot.plot_trend(
-            returns=100 * portfolio_returns_df,
-            title="Daily Returns",
-            xlabel="Date",
-            ylabel="Total Returns (%)",
-            filename="portoflio_returns_daily",
-        )
-
         portfolio_returns_cum_df = (portfolio_returns_df + 1).cumprod() - 1
         plot.plot_trend(
-            returns=100 * portfolio_returns_cum_df,
+            returns=portfolio_returns_cum_df,
             title="Cumulative Returns",
             xlabel="Date",
-            ylabel="Total Returns (%)",
+            ylabel="Returns",
             filename="portoflio_returns_cum",
         )
 
@@ -399,6 +386,7 @@ class BackTestAnalysis:
             portfolio_returns_df,
             relation_type="corr",
             title="Portfolio Correlation",
+            annotate=True,
             filename="portfolio_corr",
         )
 
@@ -406,5 +394,6 @@ class BackTestAnalysis:
             portfolio_returns_df,
             relation_type="cov",
             title="Portfolio Covariance",
+            annotate=True,
             filename="portfolio_cov",
         )
