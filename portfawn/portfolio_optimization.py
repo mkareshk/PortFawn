@@ -9,46 +9,115 @@ import scipy.optimize as sco
 
 
 class PortfolioOptimization:
-    def __init__(self, optimization_method):
-        self.optimization_method = optimization_method
-        self.optimization_params = {"maxiter": 1000, "disp": False, "ftol": 1e-10}
+    def __init__(
+        self,
+        portfolio_type,
+        expected_return,
+        expected_risk,
+        risk_free_rate,
+        optimization_params,
+    ):
 
-    def optimize(self, expected_return, expected_risk, risk_free_rate):
+        self.portfolio_type = portfolio_type
+        self.expected_return = expected_return.to_numpy()
+        self.expected_risk = expected_risk.to_numpy()
+        self.risk_free_rate = risk_free_rate
+        self.optimization_params = optimization_params
 
-        shape = (len(expected_return), 1)
+        self.asset_num = self.expected_return.shape[0]
+        self.optimization_params.update(
+            {
+                "scipy_params": {
+                    "maxiter": 1000,
+                    "disp": False,
+                    "ftol": 1e-10,
+                },
+                "target_return": 0.1,
+                "target_risk": 0.1,
+                "weight_bound": (0.0, 1.0),
+            }
+        )
 
-        if self.optimization_method == "equal":
-            return self.normalized(np.ones(shape))
-        elif self.optimization_method == "random":
+    def optimize(self):
 
-            return self.normalized(np.random.randint(low=0, high=100, size=shape))
+        shape = (len(self.expected_return), 1)
+
+        if self.portfolio_type == "equal":
+            w = np.ones(shape)
+
+        elif self.portfolio_type == "random":
+            w = np.random.randint(low=0, high=100, size=shape)
+
+        elif self.portfolio_type in ["max_return", "min_variance", "max_sharpe_ratio"]:
+            w = self.real(optimization_type=self.portfolio_type)
+
+        return self.normalized(w)
 
     def normalized(self, w):
         return w / np.sum(w)
 
-    # def calc_performance(self, weights, returns_mean, returns_cov):
-    #     performance = {}
-    #     performance.update({"return": returns_mean.dot(weights)})
-    #     performance.update({"std": np.sqrt(weights.T.dot(returns_cov).dot(weights))})
-    #     performance.update(
-    #         {
-    #             "sharpe_ratio": (performance["return"] - self.risk_free_rate)
-    #             / performance["std"]
-    #         }
-    #     )
+    def real(self, optimization_type):
 
-    #     return performance
+        # args = (self.expected_return, self.expected_risk)
+        weight_bound = self.optimization_params["weight_bound"]
+        target_return = self.optimization_params["target_return"]
+        target_risk = self.optimization_params["target_risk"]
+        weight_bounds = tuple(weight_bound for asset in range(self.asset_num))
+        initial_point = np.random.random(size=self.asset_num)
 
-    # def cost_sharpe_ratio(self, weights, returns_mean, returns_cov):
-    #     return -self.calc_performance(weights, returns_mean, returns_cov)[
-    #         "sharpe_ratio"
-    #     ]
+        # constraints
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]  # \sig{w_i} = 1
 
-    # def cost_returns(self, weights, returns_mean, returns_cov):
-    #     return -self.calc_performance(weights, returns_mean, returns_cov)["return"]
+        if optimization_type == "max_return":
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda w: w.T.dot(self.expected_risk).dot(w) - target_return,
+                }
+            )
 
-    # def cost_std(self, weights, returns_mean, returns_cov):
-    #     return self.calc_performance(weights, returns_mean, returns_cov)["std"]
+        elif optimization_type == "min_variance":
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda w: target_risk - self.expected_return.dot(w),
+                }
+            )
+
+        elif optimization_type == "max_sharpe_ratio":  # no additional constraint
+            pass
+
+        # optimization_type function
+        if optimization_type == "max_return":
+            cost_function = self.cost_returns
+        elif optimization_type == "min_variance":
+            cost_function = self.cost_std
+        elif optimization_type == "max_sharpe_ratio":
+            cost_function = self.cost_sharpe_ratio
+
+        # optimization
+        result = sco.minimize(
+            cost_function,
+            initial_point,
+            # args=args,
+            method="SLSQP",
+            bounds=weight_bounds,
+            constraints=constraints,
+            options=self.optimization_params["scipy_params"],
+        )
+
+        return result["x"].reshape(self.asset_num, 1)
+
+    def cost_sharpe_ratio(self, weights):
+        return -(self.expected_return.dot(weights) - self.risk_free_rate) / np.sqrt(
+            weights.T.dot(self.expected_risk).dot(weights)
+        )
+
+    def cost_returns(self, weights):
+        return -self.expected_return.dot(weights)
+
+    def cost_std(self, weights):
+        return np.sqrt(weights.T.dot(self.expected_risk).dot(weights))
 
     # def optimized_binary(self, optimization_type):
 
