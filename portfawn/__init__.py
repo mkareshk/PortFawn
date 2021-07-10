@@ -1,8 +1,7 @@
-from portfawn.market_data import MarketData, PlotMarketData
+from portfawn.market_data import MarketData, MarketDataAnalysis
 from portfawn.portfolio import (
     Portfolio,
-    PlotPortfolio,
-    PortfolioBackTesting,
+    BackTesting,
 )
 from portfawn.portfolio_optimization import PortfolioOptimization
 from portfawn.plot import Plot

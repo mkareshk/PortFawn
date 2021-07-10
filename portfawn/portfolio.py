@@ -9,7 +9,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 from portfawn.sampling import Sampling
-from portfawn.market_data import MarketData, PlotMarketData
+from portfawn.market_data import MarketData, MarketDataAnalysis
 from portfawn.plot import Plot
 from portfawn.portfolio_optimization import PortfolioOptimization
 from portfawn.utils import get_assets_signature, is_jsonable
@@ -90,7 +90,7 @@ class Portfolio:
         # "risk_free_rate": risk_free_rate,
 
 
-class PortfolioBackTesting:
+class BackTesting:
     def __init__(
         self,
         portfolio_types,
@@ -152,129 +152,30 @@ class PortfolioBackTesting:
             date_start=self.start_date - pd.Timedelta(training_days, unit="d"),
             date_end=self.end_date + pd.Timedelta(training_days, unit="d"),
         )
-        self.market_data_source.collect()
+        # self.market_data_source.collect()
         self.data_returns = self.market_data_source.data_returns
 
-        # market_returns_plot = PlotMarketData(
-        #     self.market_data_source, Path("data") / Path("market")
-        # )
-        # market_returns_plot.plot()
-
-    def plot(self):
-
-        profiles_backtesting_test = [
-            i["profile_testing"] for i in self.profiles_backtesting
-        ]
-        plot = Plot(asset_num=0, path_plot="temp", plot_type="portfolio")
-
-        # asset weights
-        asset_weight_list = []
-        for i in profiles_backtesting_test:
-
-            d = i["asset_weights"]
-            d.update({"date": i["date"], "portfolio_type": i["portfolio_type"]})
-            asset_weight_list.append(d)
-
-        asset_weight_df = (
-            pd.DataFrame(asset_weight_list).groupby("portfolio_type").agg("mean")
+        market_returns_plot = MarketDataAnalysis(
+            self.market_data_source, Path("results") / Path("market")
         )
-        asset_weight_df = 100 * asset_weight_df
-
-        plot.plot_bar(
-            returns=asset_weight_df,
-            title="Average Asset Weights",
-            xlabel="Portfolio",
-            ylabel="Asset Weights (%)",
-            filename="asset_weights",
-        )
-
-        # portfolio returns
-        returns_df = pd.DataFrame(profiles_backtesting_test)[
-            ["date", "portfolio_type", "daily_return"]
-        ]
-        date_list = returns_df["date"].unique()
-        portfolio_list = returns_df["portfolio_type"].unique()
-
-        portfolio_returns_list = []
-
-        for date in date_list:
-
-            filt = returns_df["date"] == date
-            returns_subset = returns_df.loc[filt, :]
-
-            d = {}
-            for p in portfolio_list:
-                r = returns_subset.loc[
-                    returns_subset["portfolio_type"] == p, "daily_return"
-                ]
-                d.update({p: float(r)})
-            d["date"] = date
-            portfolio_returns_list.append(d)
-
-        portfolio_returns_df = pd.DataFrame(portfolio_returns_list).set_index("date")
-        portfolio_returns_df = portfolio_returns_df
-
-        plot.plot_box(
-            returns=100 * portfolio_returns_df,
-            title="Distribution of Daily Returns",
-            xlabel="Portfolio",
-            ylabel="Daily Returns (%)",
-            filename="portfolio_dist",
-        )
-
-        plot.plot_trend(
-            returns=100 * portfolio_returns_df,
-            title="Daily Returns",
-            xlabel="Date",
-            ylabel="Total Returns (%)",
-            filename="portoflio_returns_daily",
-        )
-
-        portfolio_returns_cum_df = (portfolio_returns_df + 1).cumprod() - 1
-        plot.plot_trend(
-            returns=100 * portfolio_returns_cum_df,
-            title="Cumulative Returns",
-            xlabel="Date",
-            ylabel="Total Returns (%)",
-            filename="portoflio_returns_cum",
-        )
-
-        plot.plot_heatmap(
-            portfolio_returns_df,
-            relation_type="corr",
-            title="Portfolio Correlation",
-            filename="portfolio_corr",
-        )
-
-        plot.plot_heatmap(
-            portfolio_returns_df,
-            relation_type="cov",
-            title="Portfolio Covariance",
-            filename="portfolio_cov",
-        )
+        market_returns_plot.plot()
 
     def run(self):
 
         # sequential
         if self.n_jobs == 1:
-            profiles_backtesting = [
+            profile_backtesting = [
                 self.run_iter(**instance) for instance in self.get_portfolio_instances()
             ]
 
         # parallel
         elif self.n_jobs > 1:
-            profiles_backtesting = Parallel(n_jobs=self.n_jobs)(
+            profile_backtesting = Parallel(n_jobs=self.n_jobs)(
                 delayed(self.run_iter)(**instance)
                 for instance in self.get_portfolio_instances()
             )
 
-        self.profiles_backtesting = profiles_backtesting
-
-        profiles_backtesting_test = [i["profile_testing"] for i in profiles_backtesting]
-
-        self.plot()
-
-        # return profiles_backtesting
+        self.profile_backtesting = profile_backtesting
 
     def get_portfolio_instances(self):
         return [
@@ -407,141 +308,103 @@ class PortfolioBackTesting:
         return result
 
 
-class PlotPortfolio:
-    def __init__(self, portfolio, path_data=Path("data"), path_results=Path("results")):
-        self.portfolio = portfolio
-        self.path_data, self.path_results = self.create_path(path_data, path_results)
+class BackTestAnalysis:
+    def __init__(self, backtest, result_path=Path("results") / Path("portfolio")):
+        self.backtest = backtest
+        self.profile_backtesting = self.backtest.profile_backtesting
+        self.result_path = result_path
 
-        path_data.mkdir(parents=True, exist_ok=True)
-        path_results.mkdir(parents=True, exist_ok=True)
+        self.result_path.mkdir(parents=True, exist_ok=True)
 
-        # logging
-        self.logger = logging.getLogger(__name__)
+    def plot(self):
 
-        PlotMarketData(self.portfolio.market_data, path_results=self.path_results)
-        self.store_results()
-        summary = self.portfolio_summary().replace("    ", " ").replace("\n", "")
-        self.logger.info(f"The summary of the portfolio: {summary}")
+        profile_backtesting_test = [
+            i["profile_testing"] for i in self.profile_backtesting
+        ]
+        plot = Plot(path_plot=self.result_path)
 
-    def plot_all(self):
-        self.store_results()
-        self.plot_figs()
-        self.store_csvs()
-        self.portfolio_summary()
+        # asset weights
+        asset_weight_list = []
+        for i in profile_backtesting_test:
 
-    def store_results(self):
-        self.plot = Plot(
-            asset_num=len(self.portfolio.asset_list),
-            path_results=self.path_results,
-            plot_type="portfolio",
-        )
-        self.plot_figs()
-        self.store_csvs()
-        self.portfolio_summary()
+            d = i["asset_weights"]
+            d.update({"date": i["date"], "portfolio_type": i["portfolio_type"]})
+            asset_weight_list.append(d)
 
-    def plot_figs(self):
-        f_name = self.portfolio.freq_name
-        f_name_cap = f_name.capitalize()
-        p_type = self.portfolio.name
-        p_type_cap = p_type.capitalize()
-        returns = (
-            self.portfolio.performance["portfolio_asset_daily_return"]
-            .resample("M")
-            .mean()
-            .pct_change()
+        asset_weight_df = (
+            pd.DataFrame(asset_weight_list).groupby("portfolio_type").agg("mean")
         )
-        cum = self.portfolio.performance["portfolio_asset_daily_cum"]
-        # box
-        corr_wo_diag_df = returns.corr()
-        np.fill_diagonal(corr_wo_diag_df.values, 0.0)
-        self.plot.plot_box(
-            returns=returns,
-            title=f"Distribution of {p_type_cap} Portfolio {f_name_cap} Returns",
-            xlabel="Assets",
-            ylabel=f"{f_name_cap} Returns",
-            filename=f"portfolio_box_{f_name}_returns_{p_type}_{self.portfolio.portfolio_sig}",
-        )
-        # heatmap
-        self.plot.plot_heatmap(
-            returns.corr(),
-            "corr",
-            f"Correlation of {f_name_cap} Returns for {p_type_cap} Portfolio",
-            f"portfolio_corr_{f_name}_returns_{p_type}_{self.portfolio.portfolio_sig}",
-        )
-        self.plot.plot_heatmap(
-            returns.cov(),
-            "cov",
-            f"Covariance of {f_name_cap} Returns for {p_type_cap} Portfolio",
-            f"portfolio_cov_{f_name}_returns_{p_type}_{self.portfolio.portfolio_sig}",
-        )
-        # trends
-        self.plot.plot_trend(
-            returns=returns,
-            title=f"Trends of {p_type_cap} Portfolio {f_name_cap} Returns",
-            xlabel="Assets",
-            ylabel=f"{f_name_cap} Returns",
-            filename=f"portfolio_trend_{f_name}_returns_{p_type}_{self.portfolio.portfolio_sig}",
-        )
-        self.plot.plot_trend(
-            returns=cum,
-            title=f"{p_type_cap} Portfolio {f_name_cap} Cumulative Returns",
-            xlabel="Assets",
-            ylabel=f"{f_name_cap} Returns",
-            filename=f"portfolio_trend_cum_{f_name}_returns_{p_type}_{self.portfolio.portfolio_sig}",
+        asset_weight_df = 100 * asset_weight_df
+
+        plot.plot_bar(
+            returns=asset_weight_df,
+            title="Average Asset Weights",
+            xlabel="Portfolio",
+            ylabel="Asset Weights (%)",
+            filename="asset_weights",
         )
 
-    def store_csvs(self):
-        f_name = self.portfolio.freq_name
-        p_type = self.portfolio.name
-        path = self.path_results / Path("returns")
-        self.path_results.mkdir(parents=True, exist_ok=True)
-        returns = self.portfolio.performance["portfolio_asset_daily_return"]
-        cum = self.portfolio.performance["portfolio_asset_daily_cum"]
-        returns.to_csv(
-            path
-            / f"portfolio_returns_{f_name}_{p_type}_{self.portfolio.portfolio_sig}.csv"
-        )
-        cum.to_csv(
-            path / f"portfolio_cum_{f_name}_{p_type}_{self.portfolio.portfolio_sig}.csv"
-        )
-        filename = path / Path(
-            f"portfolio_stats_{p_type}_{self.portfolio.portfolio_sig}.csv"
-        )
-        returns.describe().to_csv(filename)
+        # portfolio returns
+        returns_df = pd.DataFrame(profile_backtesting_test)[
+            ["date", "portfolio_type", "daily_return"]
+        ]
+        date_list = returns_df["date"].unique()
+        portfolio_list = returns_df["portfolio_type"].unique()
 
-    def portfolio_summary(self):
-        portfolio_summary = {}
-        portfolio_summary.update({"name": self.portfolio.name})
-        portfolio_summary.update({"asset_list": self.portfolio.asset_list})
-        portfolio_summary.update({"weights": self.portfolio.weights.tolist()})
-        portfolio_summary.update(
-            {"date_start": self.portfolio.date_start.strftime("%Y-%m-%d")}
-        )
-        portfolio_summary.update(
-            {"date_end": self.portfolio.date_end.strftime("%Y-%m-%d")}
-        )
-        portfolio_summary.update({"risk_free_rate": self.portfolio.risk_free_rate})
-        for k, v in self.portfolio.performance.items():
-            if is_jsonable(v):
-                portfolio_summary.update({k: v})
-        summary_str = json.dumps(portfolio_summary, indent=4)
-        filename = self.path_results / Path(
-            f"summary_portfolio_{self.portfolio.portfolio_sig}.txt"
-        )
-        with open(filename, "wt") as fout:
-            fout.write(summary_str)
-        return summary_str
+        portfolio_returns_list = []
 
-    def create_path(self, path_data, path_results):
-        self.weights_hash = hashlib.md5(
-            "".join([str(i) for i in self.portfolio.asset_weights]).encode("utf-8")
-        ).hexdigest()[0:5]
-        self.portfolio.portfolio_sig = f"{self.weights_hash}"
-        self.portfolio.market_data_sig = get_assets_signature(
-            self.portfolio.asset_list,
-            self.portfolio.date_start,
-            self.portfolio.date_end,
+        for date in date_list:
+
+            filt = returns_df["date"] == date
+            returns_subset = returns_df.loc[filt, :]
+
+            d = {}
+            for p in portfolio_list:
+                r = returns_subset.loc[
+                    returns_subset["portfolio_type"] == p, "daily_return"
+                ]
+                d.update({p: float(r)})
+            d["date"] = date
+            portfolio_returns_list.append(d)
+
+        portfolio_returns_df = pd.DataFrame(portfolio_returns_list).set_index("date")
+        portfolio_returns_df = portfolio_returns_df
+
+        plot.plot_box(
+            returns=100 * portfolio_returns_df,
+            title="Distribution of Daily Returns",
+            xlabel="Portfolio",
+            ylabel="Daily Returns (%)",
+            filename="portfolio_dist",
         )
-        path_data = path_data / Path(self.portfolio.market_data_sig)
-        path_results = path_results / Path(self.portfolio.market_data_sig)
-        return path_data, path_results
+
+        plot.plot_trend(
+            returns=100 * portfolio_returns_df,
+            title="Daily Returns",
+            xlabel="Date",
+            ylabel="Total Returns (%)",
+            filename="portoflio_returns_daily",
+        )
+
+        portfolio_returns_cum_df = (portfolio_returns_df + 1).cumprod() - 1
+        plot.plot_trend(
+            returns=100 * portfolio_returns_cum_df,
+            title="Cumulative Returns",
+            xlabel="Date",
+            ylabel="Total Returns (%)",
+            filename="portoflio_returns_cum",
+        )
+
+        plot.plot_heatmap(
+            portfolio_returns_df,
+            relation_type="corr",
+            title="Portfolio Correlation",
+            filename="portfolio_corr",
+        )
+
+        plot.plot_heatmap(
+            portfolio_returns_df,
+            relation_type="cov",
+            title="Portfolio Covariance",
+            filename="portfolio_cov",
+        )

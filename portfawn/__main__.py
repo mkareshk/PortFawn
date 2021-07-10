@@ -3,7 +3,7 @@ from datetime import datetime
 
 import joblib
 
-from portfawn.portfolio import PortfolioBackTesting
+from portfawn.portfolio import BackTesting, BackTestAnalysis
 
 
 logging.basicConfig(
@@ -23,7 +23,7 @@ def main():
     int_stocks = ["VEU", "VWO"]
     asset_list = us_bonds + us_stocks + int_stocks
 
-    start_date = datetime.strptime("2015-01-01", "%Y-%m-%d").date()
+    start_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
     end_date = datetime.strptime("2020-01-30", "%Y-%m-%d").date()
 
     training_days = 22
@@ -57,8 +57,12 @@ def main():
     }
 
     # backtesting
-    portfolio_backtesting = PortfolioBackTesting(**kwargs)
+    portfolio_backtesting = BackTesting(**kwargs)
     portfolio_backtesting.run()
+
+    # analysis
+    analysis = BackTestAnalysis(portfolio_backtesting)
+    analysis.plot()
 
 
 if __name__ == "__main__":

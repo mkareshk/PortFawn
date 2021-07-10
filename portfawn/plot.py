@@ -21,12 +21,10 @@ pylab.rcParams.update(params)
 
 
 class Plot:
-    def __init__(self, asset_num=0, path_plot="", plot_type="portfolio"):
+    def __init__(self, path_plot=""):
 
         # parameters
-        self.asset_num = asset_num
         self.path_plot = path_plot
-        self.plot_type = plot_type
 
         # styles
         self.color_base_list = [
@@ -209,7 +207,7 @@ def demo():
     data_df["d"] = d
     data_df["e"] = e
 
-    plot = Plot(asset_num=0, path_plot="temp", plot_type="portfolio")
+    plot = Plot(path_plot="temp")
 
     plot.plot_box(
         returns=data_df,
