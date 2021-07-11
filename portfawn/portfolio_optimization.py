@@ -49,16 +49,15 @@ class PortfolioOptimization:
             w = np.random.randint(low=0, high=100, size=shape)
 
         elif self.portfolio_type in ["MR", "MV", "MSR"]:
-            w = self.real(optimization_type=self.portfolio_type)
+            w = self.real()
 
         return self.normalized(w)
 
     def normalized(self, w):
         return w / np.sum(w)
 
-    def real(self, optimization_type):
+    def real(self):
 
-        # args = (self.expected_return, self.expected_risk)
         weight_bound = self.optimization_params["weight_bound"]
         target_return = self.optimization_params["target_return"]
         target_risk = self.optimization_params["target_risk"]
@@ -68,7 +67,7 @@ class PortfolioOptimization:
         # constraints
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]  # \sig{w_i} = 1
 
-        if optimization_type == "MR":
+        if self.portfolio_type == "MR":
             constraints.append(
                 {
                     "type": "ineq",
@@ -76,7 +75,7 @@ class PortfolioOptimization:
                 }
             )
 
-        elif optimization_type == "MV":
+        elif self.portfolio_type == "MV":
             constraints.append(
                 {
                     "type": "ineq",
@@ -84,15 +83,15 @@ class PortfolioOptimization:
                 }
             )
 
-        elif optimization_type == "MSR":  # no additional constraint
+        elif self.portfolio_type == "MSR":  # no additional constraint
             pass
 
         # optimization_type function
-        if optimization_type == "MR":
+        if self.portfolio_type == "MR":
             cost_function = self.cost_returns
-        elif optimization_type == "MV":
+        elif self.portfolio_type == "MV":
             cost_function = self.cost_std
-        elif optimization_type == "MSR":
+        elif self.portfolio_type == "MSR":
             cost_function = self.cost_sharpe_ratio
 
         # optimization
