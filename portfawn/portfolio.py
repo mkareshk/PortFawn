@@ -155,11 +155,6 @@ class BackTesting:
         # self.market_data_source.collect()
         self.data_returns = self.market_data_source.data_returns
 
-        market_returns_plot = MarketDataAnalysis(
-            self.market_data_source, Path("results") / Path("market")
-        )
-        market_returns_plot.plot()
-
     def run(self):
 
         # sequential
@@ -304,12 +299,22 @@ class BackTesting:
 
 
 class BackTestAnalysis:
-    def __init__(self, backtest, result_path=Path("results") / Path("portfolio")):
+    def __init__(self, backtest, result_path):
         self.backtest = backtest
         self.profile_backtesting = self.backtest.profile_backtesting
         self.result_path = result_path
 
         self.result_path.mkdir(parents=True, exist_ok=True)
+
+    def store_params(self, kwargs):
+
+        kwargs = kwargs.copy()
+
+        kwargs["start_date"] = kwargs["start_date"].strftime("%Y/%m/%d")
+        kwargs["end_date"] = kwargs["end_date"].strftime("%Y/%m/%d")
+
+        with open(self.result_path / Path("parameters.json"), "wt") as fout:
+            json.dump(kwargs, fout, indent=4)
 
     def plot(self):
 
@@ -317,6 +322,12 @@ class BackTestAnalysis:
             i["profile_testing"] for i in self.profile_backtesting
         ]
         plot = Plot(path_plot=self.result_path)
+
+        # plot the market data
+        market_returns_plot = MarketDataAnalysis(
+            self.backtest.market_data_source, self.result_path
+        )
+        market_returns_plot.plot()
 
         # asset weights
         asset_weight_list = []

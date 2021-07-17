@@ -1,4 +1,6 @@
+import hashlib
 import logging
+from pathlib import Path
 from datetime import datetime
 
 import joblib
@@ -55,13 +57,20 @@ def main():
         "risk_free_rate": risk_free_rate,
         "n_jobs": core_num - 1,
     }
+    hash = hashlib.md5(
+        "".join([str(i) for i in kwargs.values()]).encode("utf-8")
+    ).hexdigest()[0:6]
 
     # backtesting
     portfolio_backtesting = BackTesting(**kwargs)
     portfolio_backtesting.run()
 
     # analysis
-    analysis = BackTestAnalysis(portfolio_backtesting)
+    analysis = BackTestAnalysis(
+        portfolio_backtesting,
+        result_path=Path(f"results_{hash}"),
+    )
+    analysis.store_params(kwargs)
     analysis.plot()
 
 
