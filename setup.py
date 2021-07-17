@@ -27,6 +27,7 @@ setuptools.setup(
         "pandas",
         "joblib",
         "yfinance",
+        "pytest",
     ],
     python_requires=">=3.8",
 )

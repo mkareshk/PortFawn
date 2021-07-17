@@ -16,4 +16,4 @@ COPY . .
 
 RUN pip3 install .
 
-CMD [ "python3" , "-m", "portfawn"]
+CMD [ "pytest"]
