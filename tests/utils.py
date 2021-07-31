@@ -13,10 +13,10 @@ def get_normal_param():
 
     # date
     start_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
-    end_date = datetime.strptime("2020-01-30", "%Y-%m-%d").date()
+    end_date = datetime.strptime("2021-02-02", "%Y-%m-%d").date()
 
-    training_days = 22
-    testing_days = 5
+    training_days = 30
+    testing_days = 10
 
     # market
     risk_free_rate = 0.0
@@ -24,26 +24,36 @@ def get_normal_param():
     # portfolio
     portfolio_types = [
         "Equal",
-        "Random",
         "MV",
         "MR",
         "MSR",
         # "binary_qpu",
         # "binary_sa",
     ]
+    optimization_params = {
+        "scipy_params": {
+            "maxiter": 1000,
+            "disp": False,
+            "ftol": 1e-10,
+        },
+        "target_return": 0.1,
+        "target_risk": 0.1,
+        "weight_bound": (0.0, 1.0),
+    }
+    sampling_params = {"type": "standard"}
 
     # system
-    core_num = joblib.cpu_count()
+    n_jobs = joblib.cpu_count() - 1
 
     return {
         "portfolio_types": portfolio_types,
         "asset_list": asset_list,
         "start_date": start_date,
         "end_date": end_date,
-        "optimization_params": {"name": "simple"},  ## TODO: remove
-        "sampling_params": {"name": "simple"},
+        "optimization_params": optimization_params,
+        "sampling_params": sampling_params,
         "training_days": training_days,
         "testing_days": testing_days,
         "risk_free_rate": risk_free_rate,
-        "n_jobs": core_num - 1,
+        "n_jobs": n_jobs,
     }

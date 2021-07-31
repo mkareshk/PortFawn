@@ -7,13 +7,20 @@ from pathlib import Path
 from portfawn.portfolio import BackTesting, BackTestAnalysis
 from tests.utils import get_normal_param
 
+kwargs = get_normal_param()
+kwargs["portfolio_types"] = ['SA']
+kwargs["n_jobs"] = 1
 
-class TestSampling(unittest.TestCase):
+# backtesting
+portfolio_backtesting = BackTesting(**kwargs)
+portfolio_backtesting.run()
+
+
+class TestPortfolioType(unittest.TestCase):
 
     def run_portfolio(self, kwargs):
         kwargs = get_normal_param()
-        kwargs["sampling_params"] = {"type": "bootstrapping", "sample_size": 10,
-                                     "sample_num": 49, 'agg_func': 'mean', 'risk_func': 'cov'}
+        kwargs["portfolio_types"] = ['SA']
 
         # backtesting
         portfolio_backtesting = BackTesting(**kwargs)
