@@ -50,7 +50,7 @@ def main():
         "asset_list": asset_list,
         "start_date": start_date,
         "end_date": end_date,
-        "optimization_params": {"name": "simple"},  ## TODO: remove
+        "optimization_params": {"name": "simple"},  # TODO: remove
         "sampling_params": {"name": "simple"},
         "training_days": training_days,
         "testing_days": testing_days,
