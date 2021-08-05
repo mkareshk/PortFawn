@@ -12,11 +12,11 @@ def get_normal_param():
     asset_list = us_bonds + us_stocks + int_stocks
 
     # date
-    start_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
+    start_date = datetime.strptime("2010-01-01", "%Y-%m-%d").date()
     end_date = datetime.strptime("2021-02-02", "%Y-%m-%d").date()
 
-    training_days = 30
-    testing_days = 10
+    training_days = 360
+    testing_days = 30
 
     # market
     risk_free_rate = 0.0
@@ -27,7 +27,7 @@ def get_normal_param():
         "MV",
         "MR",
         "MSR",
-        # "binary_qpu",
+        "SA",
         # "binary_sa",
     ]
     optimization_params = {

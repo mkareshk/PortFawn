@@ -107,14 +107,18 @@ class PortfolioOptimization:
 
     def binary_value_weight(self):
 
-        risk_term = np.triu(self.expected_risk)
+        risk_term = np.triu(self.expected_risk, k=1)
+        risk_max = np.max(risk_term)
+        risk_term = risk_term / risk_max
         returns_term = np.zeros(self.expected_risk.shape, float)
         np.fill_diagonal(returns_term, self.expected_return)
+        returns_term = returns_term / risk_max
         Q = risk_term + returns_term
 
         sampler = neal.SimulatedAnnealingSampler()
         samples = sampler.sample_qubo(Q)
-        return np.array(list(samples.first.sample.values()))
+        print(samples)
+        return np.array(list(samples.first.sample.values())).reshape(-1, 1)
 
         # def optimized_binary(self, optimization_type):
 

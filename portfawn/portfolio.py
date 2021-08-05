@@ -73,6 +73,11 @@ class Portfolio:
 
         performance = {}
 
+        # print(self.portfolio_type)
+        # print(self.data_returns.mean().dot(w))
+        print(type(w), w, w.shape)
+        # exit(0)
+
         performance.update(
             {f"daily_return": self.data_returns.mean().dot(w).tolist()[0]}
         )
