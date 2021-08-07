@@ -136,6 +136,7 @@ class PortfolioOptimization:
         # Sampling
         sampler = neal.SimulatedAnnealingSampler()
         samples = sampler.sample_qubo(Q)
+
         w = np.array(list(samples.first.sample.values())).reshape(self.weight_shape)
 
         return w

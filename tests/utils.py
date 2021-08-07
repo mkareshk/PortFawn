@@ -12,10 +12,11 @@ def get_normal_param():
     asset_list = us_bonds + us_stocks + int_stocks
 
     # date
-    start_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
+    start_date = datetime.strptime("2010-01-01", "%Y-%m-%d").date()
     end_date = datetime.strptime("2021-06-30", "%Y-%m-%d").date()
 
     training_days = 60
+
     testing_days = 30
 
     # market
@@ -23,6 +24,7 @@ def get_normal_param():
 
     # portfolio
     portfolio_types = ["SA", "MV", "MR", "MSR", "Equal"]
+
     optimization_params = {
         "scipy_params": {
             "maxiter": 1000,

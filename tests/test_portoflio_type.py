@@ -4,7 +4,6 @@ import unittest
 from pathlib import Path
 
 from portfawn.portfolio import BackTesting, BackTestAnalysis
-from tests.utils import get_normal_param
 
 
 class TestPortfolioType(unittest.TestCase):
