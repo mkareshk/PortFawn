@@ -28,6 +28,8 @@ setuptools.setup(
         "joblib",
         "yfinance",
         "pytest",
+        "dwave-neal",
+        "sklearn",
     ],
     python_requires=">=3.8",
 )
