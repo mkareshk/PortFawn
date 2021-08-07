@@ -1,22 +1,18 @@
-from datetime import datetime
-from portfawn.market_data import MarketData
+from pathlib import Path
 
+from portfawn.portfolio import BackTesting, BackTestAnalysis
+from tests.utils import get_normal_param
 
-asset_list = ["SPY", "BND", "GDL"]
-start = datetime.strptime("2019-01-01", "%Y-%m-%d").date()
-end = datetime.strptime("2019-02-10", "%Y-%m-%d").date()
+kwargs = get_normal_param()
 
+# backtesting
+portfolio_backtesting = BackTesting(**kwargs)
+portfolio_backtesting.run()
 
-class TestMarketData:
-    def __init__(self, asset_list):
-        self.asset_list = asset_list
-        self.market_data = MarketData(
-            asset_list=self.asset_list, date_start=start, date_end=end
-        )
-
-
-def test_create_market_data_instance():
-    market_data = TestMarketData(asset_list)
-
-
-test_create_market_data_instance()
+# analysis
+analysis = BackTestAnalysis(
+    portfolio_backtesting,
+    result_path=Path(f"results_test"),
+)
+analysis.store_params(kwargs)
+analysis.plot()

@@ -13,23 +13,16 @@ def get_normal_param():
 
     # date
     start_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()
-    end_date = datetime.strptime("2021-02-02", "%Y-%m-%d").date()
+    end_date = datetime.strptime("2021-06-30", "%Y-%m-%d").date()
 
-    training_days = 30
-    testing_days = 10
+    training_days = 60
+    testing_days = 30
 
     # market
     risk_free_rate = 0.0
 
     # portfolio
-    portfolio_types = [
-        "Equal",
-        "MV",
-        "MR",
-        "MSR",
-        # "binary_qpu",
-        # "binary_sa",
-    ]
+    portfolio_types = ["SA", "MV", "MR", "MSR", "Equal"]
     optimization_params = {
         "scipy_params": {
             "maxiter": 1000,
