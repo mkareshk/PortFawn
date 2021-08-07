@@ -39,8 +39,6 @@ def main():
         "MV",
         "MR",
         "MSR",
-        # "binary_qpu",
-        # "binary_sa",
     ]
 
     core_num = joblib.cpu_count()

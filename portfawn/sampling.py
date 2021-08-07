@@ -12,13 +12,17 @@ class Sampling:
         elif sampling_params["type"] == "bootstrapping":  # for robust stats
 
             sample_size = sampling_params["sample_size"]
-            agg_func = sampling_params['agg_func']
-            risk_func = sampling_params['risk_func']
+            agg_func = sampling_params["agg_func"]
+            risk_func = sampling_params["risk_func"]
 
             # # check for params
-            if not all(i in sampling_params for i in ['sample_size', 'sample_num', 'agg_func', 'risk_func']):
+            if not all(
+                i in sampling_params
+                for i in ["sample_size", "sample_num", "agg_func", "risk_func"]
+            ):
                 raise Exception(
-                    "sample_size, sample_num, and agg_func should be passed when using bootstrapping for sampling")
+                    "sample_size, sample_num, and agg_func should be passed when using bootstrapping for sampling"
+                )
 
             # draw samples
             return_list = []
@@ -27,16 +31,16 @@ class Sampling:
 
                 sample = data_returns.sample(n=sample_size)
 
-                if agg_func == 'mean':
+                if agg_func == "mean":
                     return_list.append(sample.mean())
-                elif agg_func == 'median':
+                elif agg_func == "median":
                     return_list.append(sample.median())
                 else:
                     raise NotImplemented
 
-                if risk_func == 'cov':
+                if risk_func == "cov":
                     risk_list.append(sample.cov())
-                elif risk_func == 'corr':
+                elif risk_func == "corr":
                     risk_list.append(sample.corr())
                 else:
                     raise NotImplemented
@@ -44,10 +48,10 @@ class Sampling:
             return_df = pd.DataFrame(return_list)
             risk_matrix = np.array([i.to_numpy() for i in risk_list])
 
-            if agg_func == 'mean':
+            if agg_func == "mean":
                 self._expected_return = return_df.mean()
                 risk_matrix = np.mean(risk_matrix, axis=0)
-            elif agg_func == 'median':
+            elif agg_func == "median":
                 risk_matrix = np.median(risk_matrix, axis=0)
             else:
                 raise NotImplemented
@@ -58,7 +62,8 @@ class Sampling:
 
         else:
             raise NotImplemented(
-                'The sampling param should be standard or bootstrapping')
+                "The sampling param should be standard or bootstrapping"
+            )
 
     @property
     def expected_return(self):

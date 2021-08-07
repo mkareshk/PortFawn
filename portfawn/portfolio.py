@@ -334,13 +334,11 @@ class BackTestAnalysis:
         for i in profile_backtesting_test:
 
             d = i["asset_weights"]
-            d.update(
-                {"date": i["date"], "portfolio_type": i["portfolio_type"]})
+            d.update({"date": i["date"], "portfolio_type": i["portfolio_type"]})
             asset_weight_list.append(d)
 
         asset_weight_df = (
-            pd.DataFrame(asset_weight_list).groupby(
-                "portfolio_type").agg("mean")
+            pd.DataFrame(asset_weight_list).groupby("portfolio_type").agg("mean")
         )
         asset_weight_df = 100 * asset_weight_df
 
@@ -375,8 +373,7 @@ class BackTestAnalysis:
             d["date"] = date
             portfolio_returns_list.append(d)
 
-        portfolio_returns_df = pd.DataFrame(
-            portfolio_returns_list).set_index("date")
+        portfolio_returns_df = pd.DataFrame(portfolio_returns_list).set_index("date")
         portfolio_returns_df = portfolio_returns_df
 
         plot.plot_box(
