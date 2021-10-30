@@ -5,7 +5,7 @@ with open("README.md", "r") as file:
 
 
 setuptools.setup(
-    name="PortFawn",  # Replace with your own username
+    name="PortFawn",
     version="0.0.1",
     author="Moein Kareshk",
     author_email="mkareshk@outlook.com",
@@ -20,16 +20,16 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "numpy",
-        "scipy",
-        "matplotlib",
-        "seaborn",
-        "pandas",
-        "joblib",
-        "yfinance",
-        "pytest",
-        "dwave-neal",
-        "sklearn",
+        "dimod>=0.10.7",
+        "dwave-neal>=0.5.8",
+        "joblib>=1.1.0",
+        "matplotlib>=3.4.3",
+        "numpy>=1.21.3",
+        "pandas>=1.3.4",
+        "scikit-learn>=1.0.1",
+        "scipy>=1.7.1",
+        "seaborn>=0.11.2",
+        "yfinance>=0.1.64",
     ],
     python_requires=">=3.8",
 )
