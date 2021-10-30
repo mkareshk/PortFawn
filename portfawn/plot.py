@@ -7,11 +7,14 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 import seaborn as sns
 
+sns.set()
+sns.set_style("whitegrid")
+
 # general configuration for matplotlib
 params = {
     "font.family": "serif",
     "legend.fontsize": "large",
-    "figure.figsize": (8, 5),
+    "figure.figsize": (15, 8),
     "axes.labelsize": "x-large",
     "axes.titlesize": "x-large",
     "xtick.labelsize": "large",
@@ -52,8 +55,11 @@ class Plot:
         # log
         self.logger = logging.getLogger(__name__)
 
-    def plot_box(self, returns, title="", xlabel="", ylabel="", filename=""):
-        returns.plot.box(
+    def plot_box(
+        self, df, title="", xlabel="", ylabel="", figsize=(15, 8), filename=""
+    ):
+        fig, ax = plt.subplots(figsize=figsize)
+        df.plot.box(
             showfliers=False,
             title=title,
             xlabel=xlabel,
@@ -62,34 +68,35 @@ class Plot:
             patch_artist=True,
             boxprops=dict(facecolor="royalblue", color="black"),
             medianprops=dict(linestyle="-", linewidth=2.5, color="khaki"),
-            figsize=(8, 8),
+            ax=ax,
         )
 
-        t = returns.to_numpy()
+        t = df.to_numpy()
         t = t[t > 0]
-        plt.yscale("symlog", linthresh=min(t))
+        ax.set_yscale("symlog", linthresh=min(t))
 
-        plt.xlabel(xlabel)
+        ax.set_xlabel(xlabel)
         plt.grid(True, axis="y")
         locs, labels = plt.xticks()
         plt.xticks(locs, self.normalize_label(labels), rotation=45)
-        plt.tight_layout()
-        plt.savefig(self.path_plot / Path(filename + ".png"))
-        plt.savefig(self.path_plot / Path(filename + ".pdf"))
-        plt.clf()
-        plt.close("all")
+        fig.tight_layout()
+        fig.savefig(self.path_plot / Path(filename + ".png"))
+        fig.savefig(self.path_plot / Path(filename + ".pdf"))
+        return fig
 
     def plot_heatmap(
-        self, returns, relation_type, title="", annotate=True, filename=""
+        self, df, relation_type, title="", annotate=True, figsize=(15, 8), filename=""
     ):
 
+        fig, ax = plt.subplots(figsize=figsize)
+
         if relation_type == "corr":
-            relations = returns.corr()
+            relations = df.corr()
             annot_fmt = "0.1f"
             shift = 1
             vmin, vmax = -1, 1
         elif relation_type == "cov":
-            relations = returns.cov()
+            relations = df.cov()
             annot_fmt = "0.1g"
             shift = 1
             vmin, vmax = relations.min().min(), relations.max().max()
@@ -108,6 +115,7 @@ class Plot:
             annot_kws={"fontsize": 12},
             vmin=vmin,
             vmax=vmax,
+            ax=ax,
         )
 
         if relation_type == "corr":
@@ -119,21 +127,26 @@ class Plot:
         plt.xticks(rotation=45)
         plt.yticks(rotation=45)
         plt.title(title)
-        plt.tight_layout()
-        plt.savefig(self.path_plot / Path(filename + ".png"))
-        plt.savefig(self.path_plot / Path(filename + ".pdf"))
-        plt.clf()
-        plt.close("all")
+        fig.tight_layout()
+        fig.savefig(self.path_plot / Path(filename + ".png"))
+        fig.savefig(self.path_plot / Path(filename + ".pdf"))
+        # plt.clf()
+        # plt.close("all")
+        return fig
 
-    def plot_trend(self, returns, title="", xlabel="", ylabel="", filename=""):
+    def plot_trend(
+        self, df, title="", xlabel="", ylabel="", figsize=(15, 8), filename=""
+    ):
+        fig, ax = plt.subplots(figsize=figsize)
 
-        returns.plot(
+        df.plot(
             title=title,
             xlabel=xlabel,
             ylabel=ylabel,
             color=self.linecolor_list,
             linewidth=self.linewidth_portfolio,
             alpha=1.0,
+            ax=ax,
         )
 
         current_handles, current_labels = plt.gca().get_legend_handles_labels()
@@ -145,41 +158,41 @@ class Plot:
             loc=2,
             borderaxespad=0.0,
         )
-        plt.tight_layout()
+        fig.tight_layout()
         plt.grid(True)
-        plt.savefig(self.path_plot / Path(filename + ".png"))
-        plt.savefig(self.path_plot / Path(filename + ".pdf"))
-        plt.clf()
-        plt.close("all")
+        fig.savefig(self.path_plot / Path(filename + ".png"))
+        fig.savefig(self.path_plot / Path(filename + ".pdf"))
+        # plt.clf()
+        # plt.close("all")
+        return fig
 
     def plot_bar(
         self,
-        returns,
-        yscale="log",
+        df,
+        yscale="linear",
         title="",
         legend_title="",
         xlabel="",
         ylabel="",
+        figsize=(15, 8),
         filename="",
     ):
-
-        returns.plot.bar()
+        fig, ax = plt.subplots(figsize=figsize)
+        df.plot.bar(ax=ax, legend=False)
         plt.grid(True, axis="y")
         locs, labels = plt.xticks()
         plt.xticks(locs, labels, rotation=45)
-        plt.yscale(yscale)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.title(title)
-        plt.legend(
+        ax.set_yscale(yscale)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        fig.legend(
             bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0, title=legend_title
         )
-
-        plt.tight_layout()
-        plt.savefig(self.path_plot / Path(filename + ".png"))
-        plt.savefig(self.path_plot / Path(filename + ".pdf"))
-        plt.clf()
-        plt.close("all")
+        fig.tight_layout()
+        fig.savefig(self.path_plot / Path(filename + ".png"))
+        fig.savefig(self.path_plot / Path(filename + ".pdf"))
+        return fig
 
     @staticmethod
     def normalize_label(labels):

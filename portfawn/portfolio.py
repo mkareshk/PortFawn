@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class Portfolio:
     def __init__(
         self,
-        portfolio_type,
+        portfolio_fitness,
         data_returns,
         asset_weights=None,
         risk_free_rate=0.0,
@@ -28,7 +28,7 @@ class Portfolio:
         sampling_params=None,
     ):
         # args
-        self.portfolio_type = portfolio_type
+        self.portfolio_fitness = portfolio_fitness
         self.optimization_params = optimization_params
         self.sampling_params = sampling_params
         self.data_returns = data_returns
@@ -56,7 +56,7 @@ class Portfolio:
 
         # optimization
         self.optimizer = PortfolioOptimization(
-            self.portfolio_type,
+            self.portfolio_fitness,
             expected_return=expected_return,
             expected_risk=expected_risk,
             risk_free_rate=self.risk_free_rate,
@@ -80,25 +80,14 @@ class Portfolio:
         self.performance = performance
 
 
-class BackTesting:
-    def __init__(
-        self,
-        portfolio_types,
-        asset_list,
-        start_date,
-        end_date,
-        optimization_params,
-        sampling_params,
-        training_days,
-        testing_days,
-        risk_free_rate,
-        n_jobs,
-    ):
+class BackTest:
+    def __init__(self, **backtesting_config):
         """[summary]
 
         Args:
-            portfolio_types ([type]): [description]
-            asset_list ([type]): [description]
+            experiment_name ([type]): [description]
+            portfolio_fitness_list ([type]): [description]
+            tickers ([type]): [description]
             start_date ([type]): [description]
             end_date ([type]): [description]
             optimization_params ([type]): [description]
@@ -110,25 +99,30 @@ class BackTesting:
         """
 
         # parameters
-        self.portfolio_types = portfolio_types
-        self.asset_list = asset_list
-        self.start_date = start_date
-        self.end_date = end_date
-        self.optimization_params = optimization_params
-        self.sampling_params = sampling_params
-        self.training_days = training_days
-        self.testing_days = testing_days
-        self.risk_free_rate = risk_free_rate
-        self.n_jobs = n_jobs
+        self._backtesting_config = backtesting_config
+        self.backtesting_name = backtesting_config["backtesting_name"]
+        self.portfolio_fitness_list = backtesting_config["portfolio_fitness_list"]
+        self.tickers = backtesting_config["tickers"]
+        self.start_date = backtesting_config["start_date"]
+        self.end_date = backtesting_config["end_date"]
+        self.optimization_params = backtesting_config["optimization_params"]
+        self.sampling_params = backtesting_config["sampling_params"]
+        self.training_days = backtesting_config["training_days"]
+        self.testing_days = backtesting_config["testing_days"]
+        self.risk_free_rate = backtesting_config["risk_free_rate"]
+        self.n_jobs = backtesting_config["n_jobs"]
 
-        # creating the time windows
+        self.asset_list = list(self.tickers.values())
+
+        # create the time windows
         self.analysis_range = pd.date_range(
             start=self.start_date,
             end=self.end_date,
             freq=f"{self.testing_days}D",
         )
 
-        # each window: (the first day of training, the reference day, the last day of testing)
+        # each window is a tuple of three elements:
+        # (the first day of training, the reference day, the last day of testing)
         self.training_delta = pd.Timedelta(self.training_days, unit="d")
         self.testing_delta = pd.Timedelta(self.testing_days, unit="d")
         self.analysis_windows = [
@@ -137,13 +131,28 @@ class BackTesting:
         ]
 
         # market data
-        self.market_data_source = MarketData(
+        self.market_data = MarketData(
             asset_list=self.asset_list,
-            date_start=self.start_date - pd.Timedelta(training_days, unit="d"),
-            date_end=self.end_date + pd.Timedelta(training_days, unit="d"),
+            date_start=self.start_date - pd.Timedelta(self.training_days, unit="d"),
+            date_end=self.end_date + pd.Timedelta(self.training_days, unit="d"),
         )
-        # self.market_data_source.collect()
-        self.data_returns = self.market_data_source.data_returns
+
+    @property
+    def backtesting_config(self):
+        return self._backtesting_config
+
+    def get_portfolio_instances(self):
+        return [
+            dict(
+                portfolio_fitness=portfolio_fitness,
+                date_start_training=window[0],
+                date_end_training=window[1],
+                date_start_testing=window[1],
+                date_end_testing=window[2],
+            )
+            for window in self.analysis_windows
+            for portfolio_fitness in self.portfolio_fitness_list
+        ]
 
     def run(self):
 
@@ -162,22 +171,9 @@ class BackTesting:
 
         self.profile_backtesting = profile_backtesting
 
-    def get_portfolio_instances(self):
-        return [
-            dict(
-                portfolio_type=portfolio_type,
-                date_start_training=window[0],
-                date_end_training=window[1],
-                date_start_testing=window[1],
-                date_end_testing=window[2],
-            )
-            for window in self.analysis_windows
-            for portfolio_type in self.portfolio_types
-        ]
-
     def run_iter(
         self,
-        portfolio_type,
+        portfolio_fitness,
         date_start_training,
         date_end_training,
         date_start_testing,
@@ -188,21 +184,22 @@ class BackTesting:
         t0 = time.time()
 
         portfolio_training = self.train(
-            portfolio_type=portfolio_type,
+            portfolio_fitness=portfolio_fitness,
             date_start_training=date_start_training,
             date_end_training=date_end_training,
         )
 
         training_time = time.time() - t0
         logger.info(
-            f"Trained {portfolio_type} portfolio from {date_start_training} to {date_end_training} in {training_time} seconds"
+            f"Trained {portfolio_fitness} portfolio from {date_start_training}"
+            f"to {date_end_training} in {training_time} seconds"
         )
 
         # testing
         t0 = time.time()
 
         portfolio_testing = self.test(
-            portfolio_type=portfolio_type,
+            portfolio_fitness=portfolio_fitness,
             asset_weights=portfolio_training.asset_weights,
             date_start_testing=date_start_testing,
             date_end_testing=date_end_testing,
@@ -210,7 +207,8 @@ class BackTesting:
 
         testing_time = time.time() - t0
         logger.info(
-            f"Tested portfolio from {date_start_testing} to {date_end_testing} in {testing_time} seconds"
+            f"Tested portfolio from {date_start_testing} to {date_end_testing}"
+            f" in {testing_time} seconds"
         )
 
         # preparing the result
@@ -236,14 +234,16 @@ class BackTesting:
 
     def train(
         self,
-        portfolio_type,
+        portfolio_fitness,
         date_start_training,
         date_end_training,
     ):
-        data_returns = self.data_returns.loc[date_start_training:date_end_training, :]
+        data_returns = self.market_data.data_returns.loc[
+            date_start_training:date_end_training, :
+        ]
 
         portfolio_training = Portfolio(
-            portfolio_type=portfolio_type,
+            portfolio_fitness=portfolio_fitness,
             data_returns=data_returns,
             risk_free_rate=self.risk_free_rate,
             optimization_params=self.optimization_params,
@@ -255,14 +255,16 @@ class BackTesting:
 
     def test(
         self,
-        portfolio_type,
+        portfolio_fitness,
         asset_weights,
         date_start_testing,
         date_end_testing,
     ):
-        data_returns = self.data_returns.loc[date_start_testing:date_end_testing, :]
+        data_returns = self.market_data.data_returns.loc[
+            date_start_testing:date_end_testing, :
+        ]
         portfolio_testing = Portfolio(
-            portfolio_type=portfolio_type,
+            portfolio_fitness=portfolio_fitness,
             data_returns=data_returns,
             asset_weights=asset_weights,
             risk_free_rate=self.risk_free_rate,
@@ -276,7 +278,7 @@ class BackTesting:
         portfolio.evaluate()
 
         result = dict(
-            portfolio_type=portfolio.portfolio_type,
+            portfolio_fitness=portfolio.portfolio_fitness,
             optimization_params=portfolio.optimization_params,
             sampling_params=portfolio.sampling_params,
             date_start=portfolio.date_start.strftime("%Y/%m/%d"),
@@ -289,63 +291,26 @@ class BackTesting:
 
 
 class BackTestAnalysis:
-    def __init__(self, backtest, result_path):
-        self.backtest = backtest
-        self.profile_backtesting = self.backtest.profile_backtesting
+    def __init__(self, portfolio_backtesting, result_path):
+        self.portfolio_backtesting = portfolio_backtesting
+        self.profile_backtesting = portfolio_backtesting.profile_backtesting
         self.result_path = result_path
-
         self.result_path.mkdir(parents=True, exist_ok=True)
-
-    def store_params(self, kwargs):
-
-        kwargs = kwargs.copy()
-
-        kwargs["start_date"] = kwargs["start_date"].strftime("%Y/%m/%d")
-        kwargs["end_date"] = kwargs["end_date"].strftime("%Y/%m/%d")
-
-        with open(self.result_path / Path("parameters.json"), "wt") as fout:
-            json.dump(kwargs, fout, indent=4)
-
-    def plot(self):
-
-        profile_backtesting_test = [
+        self.profile_backtesting_test = [
             i["profile_testing"] for i in self.profile_backtesting
         ]
-        plot = Plot(path_plot=self.result_path)
-
-        # plot the market data
-        market_returns_plot = MarketDataAnalysis(
-            self.backtest.market_data_source, self.result_path
+        self.plot = Plot(path_plot=self.result_path)
+        self.market_returns_plot = MarketDataAnalysis(
+            self.portfolio_backtesting.market_data, self.result_path
         )
-        market_returns_plot.plot()
-
-        # asset weights
-        asset_weight_list = []
-        for i in profile_backtesting_test:
-
-            d = i["asset_weights"]
-            d.update({"date": i["date"], "portfolio_type": i["portfolio_type"]})
-            asset_weight_list.append(d)
-
-        asset_weight_df = (
-            pd.DataFrame(asset_weight_list).groupby("portfolio_type").agg("mean")
-        )
-        asset_weight_df = 100 * asset_weight_df
-
-        plot.plot_bar(
-            returns=asset_weight_df,
-            title="Average Asset Weights",
-            xlabel="Portfolio",
-            ylabel="Asset Weights (%)",
-            filename="asset_weights",
-        )
+        # market_returns_plot.plot()
 
         # portfolio returns
-        returns_df = pd.DataFrame(profile_backtesting_test)[
-            ["date", "portfolio_type", "daily_return"]
+        returns_df = pd.DataFrame(self.profile_backtesting_test)[
+            ["date", "portfolio_fitness", "daily_return"]
         ]
         date_list = returns_df["date"].unique()
-        portfolio_list = returns_df["portfolio_type"].unique()
+        portfolio_list = returns_df["portfolio_fitness"].unique()
 
         portfolio_returns_list = []
 
@@ -357,42 +322,70 @@ class BackTestAnalysis:
             d = {}
             for p in portfolio_list:
                 r = returns_subset.loc[
-                    returns_subset["portfolio_type"] == p, "daily_return"
+                    returns_subset["portfolio_fitness"] == p, "daily_return"
                 ]
                 d.update({p: float(r)})
             d["date"] = date
             portfolio_returns_list.append(d)
 
-        portfolio_returns_df = pd.DataFrame(portfolio_returns_list).set_index("date")
-        portfolio_returns_df = portfolio_returns_df
+        self.portfolio_returns_df = pd.DataFrame(portfolio_returns_list).set_index(
+            "date"
+        )
 
-        plot.plot_box(
-            returns=100 * portfolio_returns_df,
+    def plot_asset_weights(self):
+        asset_weight_list = []
+        for i in self.profile_backtesting_test:
+
+            d = i["asset_weights"]
+            d.update({"date": i["date"], "portfolio_fitness": i["portfolio_fitness"]})
+            asset_weight_list.append(d)
+
+        asset_weight_df = (
+            pd.DataFrame(asset_weight_list).groupby("portfolio_fitness").agg("mean")
+        )
+        asset_weight_df = 100 * asset_weight_df
+
+        return self.plot.plot_bar(
+            df=asset_weight_df,
+            title="Average Asset Weights",
+            xlabel="Portfolio Fitness",
+            ylabel="Asset Weights (%)",
+            filename="portfolio_weights",
+        )
+
+    def plot_returns_dist(self):
+        return self.plot.plot_box(
+            df=100 * self.portfolio_returns_df,
             title="Distribution of Daily Returns",
             xlabel="Portfolio",
             ylabel="Daily Returns (%)",
             filename="portfolio_dist",
         )
 
-        portfolio_returns_cum_df = (portfolio_returns_df + 1).cumprod() - 1
-        plot.plot_trend(
-            returns=portfolio_returns_cum_df,
+    def plot_trends(self):
+        portfolio_returns_cum_df = (self.portfolio_returns_df + 1).cumprod() - 1
+        return self.plot.plot_trend(
+            df=portfolio_returns_cum_df,
             title="Cumulative Returns",
             xlabel="Date",
             ylabel="Returns",
             filename="portoflio_returns_cum",
         )
 
-        plot.plot_heatmap(
-            portfolio_returns_df,
+    def plot_corr(self):
+
+        return self.plot.plot_heatmap(
+            df=self.portfolio_returns_df,
             relation_type="corr",
             title="Portfolio Correlation",
             annotate=True,
             filename="portfolio_corr",
         )
 
-        plot.plot_heatmap(
-            portfolio_returns_df,
+    def plot_cov(self):
+
+        return self.plot.plot_heatmap(
+            df=self.portfolio_returns_df,
             relation_type="cov",
             title="Portfolio Covariance",
             annotate=True,

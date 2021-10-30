@@ -31,7 +31,7 @@ class MarketData:
         self.path_data = path_data
         self.path_metrics = self.path_data / Path("metrics")
 
-        # making the dates standard
+        # make the dates standard
         if type(date_start) != type(date_end):
             raise ValueError(
                 f"date_start ({type(date_start)}) and "
@@ -65,18 +65,18 @@ class MarketData:
             asset_list=self.asset_list, start=self.date_start_str, end=self.date_end_str
         )
 
+        # retrieve the data
         self.collect()
-        self.data_returns = self.price_df.pct_change()
 
-    # @property
-    # def data_returns(self):
-    #     self.price_df.pct_change()
-    #     return self.get_metric_by_freq(freq="D", metric="returns")
+        self._data_returns = self.price_df.pct_change().dropna()
+
+    @property
+    def data_returns(self):
+        return self._data_returns
 
     def collect(self):
 
         # collect raw data
-
         self.path_data.mkdir(parents=True, exist_ok=True)
 
         # read the existing data
