@@ -4,10 +4,12 @@ import unittest
 from pathlib import Path
 
 from portfawn.portfolio import BackTesting, BackTestAnalysis
+from tests.utils import get_normal_param
 
 
 class TestPortfolioType(unittest.TestCase):
-    def run_portfolio(self, kwargs):
+    def test_portfolio(self):
+        kwargs = get_normal_param()
 
         # backtesting
         portfolio_backtesting = BackTesting(**kwargs)
@@ -21,4 +23,4 @@ class TestPortfolioType(unittest.TestCase):
         analysis = BackTestAnalysis(portfolio_backtesting, result_path=Path(dirname))
         analysis.plot()
 
-        shutil.rmtree(dirname, ignore_errors=True)
+        # shutil.rmtree(dirname, ignore_errors=True)
