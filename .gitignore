@@ -261,3 +261,4 @@ results/
 *.png
 *.pdf
 *.csv
+*.pkl
