@@ -1,4 +1,4 @@
-from portfawn.market_data import MarketData, MarketDataAnalysis
+from portfawn.market_data import MarketData
 from portfawn.portfolio import (
     Portfolio,
     BackTest,

@@ -16,7 +16,7 @@ from portfawn.utils import (
 class MarketData:
     def __init__(
         self,
-        asset_list: list,
+        tickers: list,
         date_start: datetime = "2000-01-01",
         date_end: datetime = "2020-12-31",
         col_price: str = "Close",
@@ -24,12 +24,17 @@ class MarketData:
     ) -> None:
 
         # parameters
-        self.asset_list = asset_list
+        self.tickers = tickers
         self.date_start = date_start
         self.date_end = date_end
         self.col_price = col_price
         self.path_data = path_data
         self.path_metrics = self.path_data / Path("metrics")
+
+        self.asset_list = list(self.tickers.values())
+        self.tickers_inv = {v: k for k, v in self.tickers.items()}
+
+        self.plot = Plot()
 
         # make the dates standard
         if type(date_start) != type(date_end):
@@ -68,7 +73,18 @@ class MarketData:
         # retrieve the data
         self.collect()
 
-        self._data_returns = self.price_df.pct_change().dropna()
+        self._data_returns = self._data_prices.pct_change().dropna()
+        self._data_returns.columns = [
+            self.tickers_inv[i] for i in self._data_returns.columns
+        ]
+
+    @property
+    def data_returns(self):
+        return self._data_returns
+
+    @property
+    def data_prices(self):
+        return self._data_prices
 
     @property
     def data_returns(self):
@@ -96,7 +112,7 @@ class MarketData:
                     and end >= self.date_end
                 ):
                     price_df = pd.read_pickle(price_file)
-                    self.price_df = price_df.loc[self.date_start : self.date_end]
+                    self._data_prices = price_df.loc[self.date_start : self.date_end]
                     return
 
         # data collection using API
@@ -111,53 +127,53 @@ class MarketData:
         price_df.columns = [col[1] for col in price_df.columns.values]
         price_df.dropna(inplace=True)
         price_df.to_pickle(file_price)
-        self.price_df = price_df
+        self._data_prices = price_df
 
-
-class MarketDataAnalysis:
-    def __init__(self, market_data, path_plot: Path = Path("results") / Path("market")):
-
-        # parameters
-        self.returns_data = market_data.data_returns
-        self.path_plot = path_plot
-
-        self.path_plot.mkdir(parents=True, exist_ok=True)
-
-    def plot(self):
-
-        self.plot = Plot(path_plot=self.path_plot)
-
-        # distribution of daily returns
-        self.plot.plot_box(
-            returns=100 * self.returns_data,
+    def plot_dist_returns(self):
+        return self.plot.plot_box(
+            df=100 * self.data_returns,
             title=f"Distribution of Daily Returns",
             xlabel="Assets",
             ylabel=f"Daily Returns (%)",
-            filename=f"asset_daily_returns",
         )
 
-        # heatmap of corr and cov
-        self.plot.plot_heatmap(
-            self.returns_data,
-            "cov",
-            "Covariance of Daily returns",
-            False,
-            "asset_cov_daily",
-        )
-        self.plot.plot_heatmap(
-            self.returns_data,
-            "corr",
-            "Correlation of Daily returns",
-            False,
-            "asset_corr_daily",
+    def plot_corr(self):
+        return self.plot.plot_heatmap(
+            df=self.data_returns,
+            relation_type="corr",
+            title="Portfolio Correlation",
+            annotate=True,
         )
 
-        # daily returns
-        self.returns_data_cum = (self.returns_data + 1).cumprod() - 1
-        self.plot.plot_trend(
-            returns=self.returns_data_cum,
-            title="Cumulative Asset Returns",
+    def plot_cov(self):
+        return self.plot.plot_heatmap(
+            df=self.data_returns,
+            relation_type="cov",
+            title="Portfolio Covariance",
+            annotate=True,
+        )
+
+    def plot_cum_returns(self):
+        portfolio_returns_cum_df = (self.data_returns + 1).cumprod() - 1
+        return self.plot.plot_trend(
+            df=portfolio_returns_cum_df,
+            title="Cumulative Returns",
             xlabel="Date",
-            ylabel="Cumulative Returns",
-            filename="asset__daily_cum_returns",
+            ylabel="Returns",
+        )
+
+    def plot_returns(self):
+        return self.plot.plot_trend(
+            df=self.data_returns,
+            title="Cumulative Returns",
+            xlabel="Date",
+            ylabel="Returns",
+        )
+
+    def plot_prices(self):
+        return self.plot.plot_trend(
+            df=self._data_prices,
+            title="Price",
+            xlabel="Date",
+            ylabel="Price",
         )

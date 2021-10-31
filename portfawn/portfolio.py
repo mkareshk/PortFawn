@@ -9,7 +9,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 from portfawn.sampling import Sampling
-from portfawn.market_data import MarketData, MarketDataAnalysis
+from portfawn.market_data import MarketData
 from portfawn.plot import Plot
 from portfawn.portfolio_optimization import PortfolioOptimization
 from portfawn.utils import get_assets_signature, is_jsonable
@@ -101,7 +101,7 @@ class BackTest:
         # parameters
         self._backtesting_config = backtesting_config
         self.backtesting_name = backtesting_config["backtesting_name"]
-        self.portfolio_fitness_list = backtesting_config["portfolio_fitness_list"]
+        self.portfolio_fitness = backtesting_config["portfolio_fitness"]
         self.tickers = backtesting_config["tickers"]
         self.start_date = backtesting_config["start_date"]
         self.end_date = backtesting_config["end_date"]
@@ -113,6 +113,8 @@ class BackTest:
         self.n_jobs = backtesting_config["n_jobs"]
 
         self.asset_list = list(self.tickers.values())
+        self.tickers_inv = {v: k for k, v in self.tickers.items()}
+        self.portfolio_fitness_list = list(self.portfolio_fitness.keys())
 
         # create the time windows
         self.analysis_range = pd.date_range(
@@ -132,7 +134,7 @@ class BackTest:
 
         # market data
         self.market_data = MarketData(
-            asset_list=self.asset_list,
+            tickers=self.tickers,
             date_start=self.start_date - pd.Timedelta(self.training_days, unit="d"),
             date_end=self.end_date + pd.Timedelta(self.training_days, unit="d"),
         )
@@ -294,15 +296,14 @@ class BackTestAnalysis:
     def __init__(self, portfolio_backtesting, result_path):
         self.portfolio_backtesting = portfolio_backtesting
         self.profile_backtesting = portfolio_backtesting.profile_backtesting
+        self.backtesting_config = portfolio_backtesting.backtesting_config
         self.result_path = result_path
         self.result_path.mkdir(parents=True, exist_ok=True)
         self.profile_backtesting_test = [
             i["profile_testing"] for i in self.profile_backtesting
         ]
-        self.plot = Plot(path_plot=self.result_path)
-        self.market_returns_plot = MarketDataAnalysis(
-            self.portfolio_backtesting.market_data, self.result_path
-        )
+        self.plot = Plot()
+
         # market_returns_plot.plot()
 
         # portfolio returns
@@ -331,6 +332,10 @@ class BackTestAnalysis:
         self.portfolio_returns_df = pd.DataFrame(portfolio_returns_list).set_index(
             "date"
         )
+        self.portfolio_returns_df.columns = [
+            self.portfolio_backtesting.portfolio_fitness[i]
+            for i in self.portfolio_returns_df.columns
+        ]
 
     def plot_asset_weights(self):
         asset_weight_list = []
@@ -345,21 +350,28 @@ class BackTestAnalysis:
         )
         asset_weight_df = 100 * asset_weight_df
 
+        asset_weight_df.columns = [
+            self.portfolio_backtesting.tickers_inv[c] for c in asset_weight_df.columns
+        ]
+        asset_weight_df.index = [
+            self.portfolio_backtesting.portfolio_fitness[i]
+            for i in asset_weight_df.index
+        ]
+
         return self.plot.plot_bar(
             df=asset_weight_df,
             title="Average Asset Weights",
             xlabel="Portfolio Fitness",
             ylabel="Asset Weights (%)",
-            filename="portfolio_weights",
         )
 
     def plot_returns_dist(self):
+
         return self.plot.plot_box(
             df=100 * self.portfolio_returns_df,
             title="Distribution of Daily Returns",
-            xlabel="Portfolio",
+            xlabel="Portfolio Fitness",
             ylabel="Daily Returns (%)",
-            filename="portfolio_dist",
         )
 
     def plot_trends(self):
@@ -369,25 +381,20 @@ class BackTestAnalysis:
             title="Cumulative Returns",
             xlabel="Date",
             ylabel="Returns",
-            filename="portoflio_returns_cum",
         )
 
     def plot_corr(self):
-
         return self.plot.plot_heatmap(
             df=self.portfolio_returns_df,
             relation_type="corr",
             title="Portfolio Correlation",
             annotate=True,
-            filename="portfolio_corr",
         )
 
     def plot_cov(self):
-
         return self.plot.plot_heatmap(
             df=self.portfolio_returns_df,
             relation_type="cov",
             title="Portfolio Covariance",
             annotate=True,
-            filename="portfolio_cov",
         )
