@@ -18,28 +18,36 @@ logger = logging.getLogger(__name__)
 
 
 class Portfolio:
-    def __init__(
-        self,
-        portfolio_fitness,
-        data_returns,
-        asset_weights=None,
-        risk_free_rate=0.0,
-        optimization_params=None,
-        sampling_params=None,
-    ):
+    def __init__(self, **portfolio_config):
+
         # args
-        self.portfolio_fitness = portfolio_fitness
-        self.optimization_params = optimization_params
-        self.sampling_params = sampling_params
-        self.data_returns = data_returns
-        self.asset_weights = asset_weights
-        self.risk_free_rate = risk_free_rate
+        self.portfolio_config = portfolio_config
+        self.portfolio_fitness = portfolio_config["portfolio_fitness"]
+        self.data_returns = portfolio_config["data_returns"]
+        self.optimization_params = portfolio_config.get(
+            "optimization_params",
+            {
+                "scipy_params": {
+                    "maxiter": 1000,
+                    "disp": False,
+                    "ftol": 1e-10,
+                },
+                "target_return": 0.1,
+                "target_risk": 0.1,
+                "weight_bound": (0.0, 1.0),
+            },
+        )
+        self.sampling_params = portfolio_config.get(
+            "sampling_params", {"type": "standard"}
+        )
+        self.risk_free_rate = portfolio_config.get("risk_free_rate", 0.0)
+        self.asset_weights = portfolio_config.get("asset_weights", None)
 
         # other params
-        self.asset_list = list(data_returns.columns)
-
-        self.date_start = data_returns.index[0]
-        self.date_end = data_returns.index[-1]
+        self.asset_list = list(self.data_returns.columns)
+        self.date_start = self.data_returns.index[0]
+        self.date_end = self.data_returns.index[-1]
+        self.plot = Plot()
 
     def optimize(self):
         if self.asset_weights:
@@ -66,18 +74,188 @@ class Portfolio:
 
     def evaluate(self):
 
+        w = self.asset_weights
+        returns_np = self.data_returns.to_numpy()
+        cov = self.data_returns.cov().to_numpy()
+
         self.asset_weights_dict = {
             self.asset_list[ind]: float(w) for ind, w in enumerate(self.asset_weights)
         }
-        w = self.asset_weights
+
+        # returns
+        portfolio_returns = pd.DataFrame(
+            returns_np.dot(w),
+            index=self.data_returns.index,
+            columns=[self.portfolio_fitness],
+        )
+        daily_return = portfolio_returns.mean().values[0]
+        portfolio_cum_returns = (portfolio_returns + 1).cumprod() - 1
+
+        # volatility
+        portdolio_std = np.sqrt(w.T.dot(cov).dot(w))[0][0]
+
+        # market
+        market_mean_std = pd.DataFrame(columns=["mean", "std"])
+        market_mean_std["mean"] = self.data_returns.mean()
+        market_mean_std["std"] = self.data_returns.std()
+
+        # portfolio
+        portfolio_mean_std = pd.DataFrame(
+            index=[self.portfolio_fitness], columns=["mean", "std"]
+        )
+        portfolio_mean_std["mean"] = daily_return
+        portfolio_mean_std["std"] = portdolio_std
 
         performance = {}
-
         performance.update(
-            {f"daily_return": self.data_returns.mean().dot(w).tolist()[0]}
+            {
+                "portfolio_returns": portfolio_returns,
+                "portfolio_cum_returns": portfolio_cum_returns,
+                "daily_return": daily_return,
+                "daily_std": portdolio_std,
+                "asset_weights_dict": self.asset_weights_dict,
+                "portfolio_config": self.portfolio_config,
+                "market_mean_std": market_mean_std,
+                "portfolio_mean_std": portfolio_mean_std,
+            }
         )
 
         self.performance = performance
+
+    def __str__(self):
+
+        if not self.performance:
+            raise Exception("The portfolio.evaluate() methos should call first.")
+
+        p = self.performance.copy()
+        w_str = json.dumps(p["asset_weights_dict"], sort_keys=True, indent=4)
+
+        out_str = ""
+        out_str += f"- asset_weights_dict:\n{w_str}\n\n"
+        out_str += f"- daily_return:\n{p['daily_return']}\n\n"
+        out_str += f"- daily_std:\n{p['daily_std']}\n\n"
+        out_str += f"- portfolio_returns:\n{p['portfolio_returns']}\n\n"
+        out_str += f"- portfolio_cum_returns:\n{p['portfolio_cum_returns']}\n\n"
+
+        return out_str
+
+    def plot_returns(self):
+        fig, ax = self.plot.plot_trend(
+            df=self.performance["portfolio_returns"],
+            title=f"{self.portfolio_fitness} Returns",
+            xlabel="Date",
+            ylabel="Returns",
+            legend=False,
+        )
+        return fig, ax
+
+    def plot_cum_returns(self):
+        portfolio_cum = (self.performance["portfolio_returns"] + 1).cumprod() - 1
+        assets_cum = (self.data_returns + 1).cumprod() - 1
+        portfolio_returns_cum_df = pd.concat([portfolio_cum, assets_cum], axis=1)
+        fig, ax = self.plot.plot_trend(
+            df=portfolio_returns_cum_df,
+            title="Cumulative Returns",
+            xlabel="Date",
+            ylabel="Returns",
+        )
+        return fig, ax
+
+    def plot_dist_returns(self):
+        portfolio_returns_df = pd.concat(
+            [self.performance["portfolio_returns"], self.data_returns], axis=1
+        )
+        fig, ax = self.plot.plot_box(
+            df=100 * portfolio_returns_df,
+            title="Distribution of Daily Returns",
+            xlabel="Portfolio Fitness",
+            ylabel="Daily Returns (%)",
+        )
+        return fig, ax
+
+    def plot_corr(self):
+        portfolio_returns_df = pd.concat(
+            [self.performance["portfolio_returns"], self.data_returns], axis=1
+        )
+        fig, ax = self.plot.plot_heatmap(
+            df=portfolio_returns_df,
+            relation_type="corr",
+            title="Portfolio Correlation",
+            annotate=True,
+        )
+        return fig, ax
+
+    def plot_cov(self):
+        portfolio_returns_df = pd.concat(
+            [self.performance["portfolio_returns"], self.data_returns], axis=1
+        )
+        fig, ax = self.plot.plot_heatmap(
+            df=portfolio_returns_df,
+            relation_type="cov",
+            title="Portfolio Covariance",
+            annotate=True,
+        )
+        return fig, ax
+
+    def plot_mean_std(
+        self,
+        annualized=True,
+        fig=None,
+        ax=None,
+    ):
+
+        # market
+        market_mean_std = pd.DataFrame(columns=["mean", "std"])
+        market_mean_std["mean"] = self.data_returns.mean()
+        market_mean_std["std"] = self.data_returns.std()
+
+        # portfolio
+        portfolio_mean_std = pd.DataFrame(
+            index=[self.portfolio_fitness], columns=["mean", "std"]
+        )
+        portfolio_mean_std["mean"] = [self.performance["daily_return"]]
+        portfolio_mean_std["std"] = [self.performance["daily_std"]]
+
+        if annualized:
+            market_mean_std["mean"] *= 252
+            market_mean_std["std"] *= np.sqrt(252)
+            portfolio_mean_std["mean"] *= 252
+            portfolio_mean_std["std"] *= np.sqrt(252)
+
+        fig, ax = self.plot.plot_scatter_portfolio(
+            df_1=market_mean_std,
+            df_2=portfolio_mean_std,
+            title="Expected Returns vs. Volatility",
+            xlabel="Volatility (STD)",
+            ylabel="Expected Returns",
+        )
+
+        mean_std_random = self.random_portfolio()
+
+        fig, ax = self.plot.plot_scatter_portfolio_random(
+            df_1=market_mean_std,
+            df_2=portfolio_mean_std,
+            df_3=mean_std_random,
+            title="Expected Returns vs. Volatility",
+            xlabel="Volatility (STD)",
+            ylabel="Expected Returns",
+        )
+
+        return fig, ax
+
+    def random_portfolio(self):
+        n = 10000
+        annualized = 252
+        returns_np = self.data_returns.to_numpy()
+        cov = self.data_returns.cov().to_numpy()
+        r_list = []
+        for i in range(n):
+            w_rand = np.random.random((1, cov.shape[0]))
+            w_rand = w_rand / w_rand.sum()
+            r = returns_np.dot(w_rand.T).mean() * annualized
+            c = np.sqrt(w_rand.dot(cov).dot(w_rand.T))[0][0] * np.sqrt(annualized)
+            r_list.append({"mean": r, "std": c})
+        return pd.DataFrame(r_list)
 
 
 class BackTest:
@@ -299,8 +477,10 @@ class BackTestAnalysis:
         self.backtesting_config = portfolio_backtesting.backtesting_config
         self.result_path = result_path
         self.result_path.mkdir(parents=True, exist_ok=True)
+
         self.profile_backtesting_test = [
-            i["profile_testing"] for i in self.profile_backtesting
+            i["profile_training"]
+            for i in self.profile_backtesting  # TODO: testing or training
         ]
         self.plot = Plot()
 
@@ -308,34 +488,89 @@ class BackTestAnalysis:
 
         # portfolio returns
         returns_df = pd.DataFrame(self.profile_backtesting_test)[
-            ["date", "portfolio_fitness", "daily_return"]
+            ["date", "portfolio_fitness", "daily_return", "daily_std"]
         ]
         date_list = returns_df["date"].unique()
         portfolio_list = returns_df["portfolio_fitness"].unique()
 
         portfolio_returns_list = []
+        portfolio_risk_list = []
 
         for date in date_list:
-
-            filt = returns_df["date"] == date
-            returns_subset = returns_df.loc[filt, :]
-
-            d = {}
+            d_return = {"date": date}
+            d_risk = {"date": date}
             for p in portfolio_list:
-                r = returns_subset.loc[
-                    returns_subset["portfolio_fitness"] == p, "daily_return"
-                ]
-                d.update({p: float(r)})
-            d["date"] = date
-            portfolio_returns_list.append(d)
+                filt = (returns_df["date"] == date) & (
+                    returns_df["portfolio_fitness"] == p
+                )
+                r, s = returns_df.loc[filt, ["daily_return", "daily_std"]].values[0]
+                d_return.update({f"{p}": float(r)})
+                d_risk.update({f"{p}": float(s)})
+            portfolio_returns_list.append(d_return)
+            portfolio_risk_list.append(d_risk)
 
-        self.portfolio_returns_df = pd.DataFrame(portfolio_returns_list).set_index(
-            "date"
-        )
-        self.portfolio_returns_df.columns = [
+        self.portfolio_returns = pd.DataFrame(portfolio_returns_list).set_index("date")
+        self.portfolio_risk = pd.DataFrame(portfolio_risk_list).set_index("date")
+
+        self.portfolio_returns.columns = [
             self.portfolio_backtesting.portfolio_fitness[i]
-            for i in self.portfolio_returns_df.columns
+            for i in self.portfolio_returns.columns
         ]
+        self.portfolio_risk.columns = [
+            self.portfolio_backtesting.portfolio_fitness[i]
+            for i in self.portfolio_risk.columns
+        ]
+        self._mean_std = pd.DataFrame(columns=["mean", "std"])
+        self._mean_std["mean"] = self.portfolio_returns.mean()
+        self._mean_std["std"] = self.portfolio_risk.mean()
+        print(self._mean_std)
+
+    def plot_returns(self):
+        fig, ax = self.plot.plot_trend(
+            df=self.portfolio_returns,
+            title="Cumulative Returns",
+            xlabel="Date",
+            ylabel="Returns",
+        )
+        return fig, ax
+
+    def plot_cum_returns(self):
+        portfolio_returns_cum_df = (self.portfolio_returns + 1).cumprod() - 1
+        fig, ax = self.plot.plot_trend(
+            df=portfolio_returns_cum_df,
+            title="Cumulative Returns",
+            xlabel="Date",
+            ylabel="Returns",
+        )
+        return fig, ax
+
+    def plot_dist_returns(self):
+
+        fig, ax = self.plot.plot_box(
+            df=100 * self.portfolio_returns,
+            title="Distribution of Daily Returns",
+            xlabel="Portfolio Fitness",
+            ylabel="Daily Returns (%)",
+        )
+        return fig, ax
+
+    def plot_corr(self):
+        fig, ax = self.plot.plot_heatmap(
+            df=self.portfolio_returns,
+            relation_type="corr",
+            title="Portfolio Correlation",
+            annotate=True,
+        )
+        return fig, ax
+
+    def plot_cov(self):
+        fig, ax = self.plot.plot_heatmap(
+            df=self.portfolio_returns,
+            relation_type="cov",
+            title="Portfolio Covariance",
+            annotate=True,
+        )
+        return fig, ax
 
     def plot_asset_weights(self):
         asset_weight_list = []
@@ -350,51 +585,63 @@ class BackTestAnalysis:
         )
         asset_weight_df = 100 * asset_weight_df
 
-        asset_weight_df.columns = [
-            self.portfolio_backtesting.tickers_inv[c] for c in asset_weight_df.columns
-        ]
         asset_weight_df.index = [
             self.portfolio_backtesting.portfolio_fitness[i]
             for i in asset_weight_df.index
         ]
 
-        return self.plot.plot_bar(
+        fig, ax = self.plot.plot_bar(
             df=asset_weight_df,
             title="Average Asset Weights",
             xlabel="Portfolio Fitness",
             ylabel="Asset Weights (%)",
         )
+        return fig, ax
 
-    def plot_returns_dist(self):
+    def plot_mean_std(
+        self,
+        annualized=True,
+        fig=None,
+        ax=None,
+    ):
 
-        return self.plot.plot_box(
-            df=100 * self.portfolio_returns_df,
-            title="Distribution of Daily Returns",
+        ms = self._mean_std.copy()
+
+        if annualized:
+            ms["mean"] *= 252
+            ms["std"] *= np.sqrt(252)
+
+        fig, ax = self.plot.plot_scatter_portfolio(
+            df_1=ms,
+            df_2=self.portfolio_backtesting.market_data.mean_std,
+            title="Expected Returns vs. Volatility",
+            xlabel="Volatility (STD)",
+            ylabel="Expected Returns",
+        )
+        return fig, ax
+
+    def plot_asset_weights(self):
+        asset_weight_list = []
+        for i in self.profile_backtesting_test:
+
+            d = i["asset_weights"]
+            d.update({"date": i["date"], "portfolio_fitness": i["portfolio_fitness"]})
+            asset_weight_list.append(d)
+
+        asset_weight_df = (
+            pd.DataFrame(asset_weight_list).groupby("portfolio_fitness").agg("mean")
+        )
+        asset_weight_df = 100 * asset_weight_df
+
+        asset_weight_df.index = [
+            self.portfolio_backtesting.portfolio_fitness[i]
+            for i in asset_weight_df.index
+        ]
+
+        fig, ax = self.plot.plot_bar(
+            df=asset_weight_df,
+            title="Average Asset Weights",
             xlabel="Portfolio Fitness",
-            ylabel="Daily Returns (%)",
+            ylabel="Asset Weights (%)",
         )
-
-    def plot_trends(self):
-        portfolio_returns_cum_df = (self.portfolio_returns_df + 1).cumprod() - 1
-        return self.plot.plot_trend(
-            df=portfolio_returns_cum_df,
-            title="Cumulative Returns",
-            xlabel="Date",
-            ylabel="Returns",
-        )
-
-    def plot_corr(self):
-        return self.plot.plot_heatmap(
-            df=self.portfolio_returns_df,
-            relation_type="corr",
-            title="Portfolio Correlation",
-            annotate=True,
-        )
-
-    def plot_cov(self):
-        return self.plot.plot_heatmap(
-            df=self.portfolio_returns_df,
-            relation_type="cov",
-            title="Portfolio Covariance",
-            annotate=True,
-        )
+        return fig, ax

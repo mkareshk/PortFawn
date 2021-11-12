@@ -72,11 +72,14 @@ class MarketData:
 
         # retrieve the data
         self.collect()
-
-        self._data_returns = self._data_prices.pct_change().dropna()
-        self._data_returns.columns = [
-            self.tickers_inv[i] for i in self._data_returns.columns
+        self._data_prices.columns = [
+            self.tickers_inv[i] for i in self._data_prices.columns
         ]
+        self._data_returns = self._data_prices.pct_change().dropna()
+        self._data_cum_returns = (self._data_returns + 1).cumprod() - 1
+        self._mean_std = pd.DataFrame(columns=["mean", "std"])
+        self._mean_std["mean"] = self._data_returns.mean()
+        self._mean_std["std"] = self._data_returns.std()
 
     @property
     def data_returns(self):
@@ -87,8 +90,12 @@ class MarketData:
         return self._data_prices
 
     @property
-    def data_returns(self):
-        return self._data_returns
+    def data_cum_returns(self):
+        return self._data_cum_returns
+
+    @property
+    def mean_std(self):
+        return self._mean_std
 
     def collect(self):
 
@@ -129,51 +136,81 @@ class MarketData:
         price_df.to_pickle(file_price)
         self._data_prices = price_df
 
+    def plot_prices(self):
+        fig, ax = self.plot.plot_trend(
+            df=self._data_prices,
+            title="Asset Prices",
+            xlabel="Date",
+            ylabel="Price",
+        )
+        return fig, ax
+
+    def plot_returns(self, alpha=1):
+        fig, ax = self.plot.plot_trend(
+            df=self.data_returns,
+            title="Daily Returns",
+            xlabel="Date",
+            ylabel="DailyReturns",
+            alpha=alpha,
+        )
+        return fig, ax
+
+    def plot_cum_returns(self):
+        fig, ax = self.plot.plot_trend(
+            df=self.data_cum_returns,
+            title="Cumulative Returns",
+            xlabel="Date",
+            ylabel="Returns",
+        )
+        return fig, ax
+
     def plot_dist_returns(self):
-        return self.plot.plot_box(
+        fig, ax = self.plot.plot_box(
             df=100 * self.data_returns,
             title=f"Distribution of Daily Returns",
             xlabel="Assets",
-            ylabel=f"Daily Returns (%)",
+            ylabel=f"Returns",
         )
+        return fig, ax
 
     def plot_corr(self):
-        return self.plot.plot_heatmap(
+        fig, ax = self.plot.plot_heatmap(
             df=self.data_returns,
             relation_type="corr",
             title="Portfolio Correlation",
             annotate=True,
         )
+        return fig, ax
 
     def plot_cov(self):
-        return self.plot.plot_heatmap(
+        fig, ax = self.plot.plot_heatmap(
             df=self.data_returns,
             relation_type="cov",
             title="Portfolio Covariance",
             annotate=True,
         )
+        return fig, ax
 
-    def plot_cum_returns(self):
-        portfolio_returns_cum_df = (self.data_returns + 1).cumprod() - 1
-        return self.plot.plot_trend(
-            df=portfolio_returns_cum_df,
-            title="Cumulative Returns",
-            xlabel="Date",
-            ylabel="Returns",
-        )
+    def plot_mean_std(
+        self,
+        annualized=True,
+        colour="tab:blue",
+        fig=None,
+        ax=None,
+    ):
+        ms = self._mean_std.copy()
 
-    def plot_returns(self):
-        return self.plot.plot_trend(
-            df=self.data_returns,
-            title="Cumulative Returns",
-            xlabel="Date",
-            ylabel="Returns",
-        )
+        if annualized:
+            ms["mean"] *= 252
+            ms["std"] *= np.sqrt(252)
 
-    def plot_prices(self):
-        return self.plot.plot_trend(
-            df=self._data_prices,
-            title="Price",
-            xlabel="Date",
-            ylabel="Price",
+        fig, ax = self.plot.plot_scatter(
+            df=ms,
+            title="Expected Returns vs. Volatility",
+            xlabel="Volatility (STD)",
+            ylabel="Expected Returns",
+            colour=colour,
+            fig=fig,
+            ax=ax,
         )
+        return fig, ax
