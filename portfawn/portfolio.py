@@ -42,6 +42,7 @@ class Portfolio:
         )
         self.risk_free_rate = portfolio_config.get("risk_free_rate", 0.0)
         self.asset_weights = portfolio_config.get("asset_weights", None)
+        self.annualized_days = 252
 
         # other params
         self.asset_list = list(self.data_returns.columns)
@@ -90,6 +91,14 @@ class Portfolio:
         )
         daily_return = portfolio_returns.mean().values[0]
         portfolio_cum_returns = (portfolio_returns + 1).cumprod() - 1
+        assets_cum_returns = (self.data_returns + 1).cumprod() - 1
+        portfolio_assets_returns = pd.concat(
+            [portfolio_returns, self.data_returns], axis=1
+        )
+        portfolio_assets_cum_returns = pd.concat(
+            [portfolio_cum_returns, assets_cum_returns], axis=1
+        )
+        portfolio_asset_total_return = portfolio_assets_cum_returns.iloc[-1, :]
 
         # volatility
         portdolio_std = np.sqrt(w.T.dot(cov).dot(w))[0][0]
@@ -111,12 +120,15 @@ class Portfolio:
             {
                 "portfolio_returns": portfolio_returns,
                 "portfolio_cum_returns": portfolio_cum_returns,
+                "portfolio_assets_returns": portfolio_assets_returns,
+                "portfolio_asset_total_return": portfolio_asset_total_return,
                 "daily_return": daily_return,
                 "daily_std": portdolio_std,
                 "asset_weights_dict": self.asset_weights_dict,
                 "portfolio_config": self.portfolio_config,
-                "market_mean_std": market_mean_std,
-                "portfolio_mean_std": portfolio_mean_std,
+                "portfolio_asset_mean_std": pd.concat(
+                    [portfolio_mean_std, market_mean_std], axis=0
+                ),
             }
         )
 
@@ -150,11 +162,8 @@ class Portfolio:
         return fig, ax
 
     def plot_cum_returns(self):
-        portfolio_cum = (self.performance["portfolio_returns"] + 1).cumprod() - 1
-        assets_cum = (self.data_returns + 1).cumprod() - 1
-        portfolio_returns_cum_df = pd.concat([portfolio_cum, assets_cum], axis=1)
         fig, ax = self.plot.plot_trend(
-            df=portfolio_returns_cum_df,
+            df=self.performance["portfolio_assets_cum_returns"],
             title="Cumulative Returns",
             xlabel="Date",
             ylabel="Returns",
@@ -162,11 +171,8 @@ class Portfolio:
         return fig, ax
 
     def plot_dist_returns(self):
-        portfolio_returns_df = pd.concat(
-            [self.performance["portfolio_returns"], self.data_returns], axis=1
-        )
         fig, ax = self.plot.plot_box(
-            df=100 * portfolio_returns_df,
+            df=100 * self.performance["portfolio_assets_returns"],
             title="Distribution of Daily Returns",
             xlabel="Portfolio Fitness",
             ylabel="Daily Returns (%)",
@@ -174,11 +180,9 @@ class Portfolio:
         return fig, ax
 
     def plot_corr(self):
-        portfolio_returns_df = pd.concat(
-            [self.performance["portfolio_returns"], self.data_returns], axis=1
-        )
+
         fig, ax = self.plot.plot_heatmap(
-            df=portfolio_returns_df,
+            df=self.performance["portfolio_assets_returns"],
             relation_type="corr",
             title="Portfolio Correlation",
             annotate=True,
@@ -186,11 +190,8 @@ class Portfolio:
         return fig, ax
 
     def plot_cov(self):
-        portfolio_returns_df = pd.concat(
-            [self.performance["portfolio_returns"], self.data_returns], axis=1
-        )
         fig, ax = self.plot.plot_heatmap(
-            df=portfolio_returns_df,
+            df=self.performance["portfolio_assets_returns"],
             relation_type="cov",
             title="Portfolio Covariance",
             annotate=True,
@@ -204,38 +205,22 @@ class Portfolio:
         ax=None,
     ):
 
-        # market
-        market_mean_std = pd.DataFrame(columns=["mean", "std"])
-        market_mean_std["mean"] = self.data_returns.mean()
-        market_mean_std["std"] = self.data_returns.std()
-
-        # portfolio
-        portfolio_mean_std = pd.DataFrame(
-            index=[self.portfolio_fitness], columns=["mean", "std"]
-        )
-        portfolio_mean_std["mean"] = [self.performance["daily_return"]]
-        portfolio_mean_std["std"] = [self.performance["daily_std"]]
+        market_mean_std = self.performance["market_mean_std"]
+        portfolio_mean_std = self.performance["portfolio_mean_std"]
+        random_mean_std = self.random_portfolio()
 
         if annualized:
-            market_mean_std["mean"] *= 252
-            market_mean_std["std"] *= np.sqrt(252)
-            portfolio_mean_std["mean"] *= 252
-            portfolio_mean_std["std"] *= np.sqrt(252)
-
-        fig, ax = self.plot.plot_scatter_portfolio(
-            df_1=market_mean_std,
-            df_2=portfolio_mean_std,
-            title="Expected Returns vs. Volatility",
-            xlabel="Volatility (STD)",
-            ylabel="Expected Returns",
-        )
-
-        mean_std_random = self.random_portfolio()
+            market_mean_std["mean"] *= self.annualized_days
+            market_mean_std["std"] *= np.sqrt(self.annualized_days)
+            portfolio_mean_std["mean"] *= self.annualized_days
+            portfolio_mean_std["std"] *= np.sqrt(self.annualized_days)
+            random_mean_std["mean"] *= self.annualized_days
+            random_mean_std["std"] *= np.sqrt(self.annualized_days)
 
         fig, ax = self.plot.plot_scatter_portfolio_random(
             df_1=market_mean_std,
             df_2=portfolio_mean_std,
-            df_3=mean_std_random,
+            df_3=random_mean_std,
             title="Expected Returns vs. Volatility",
             xlabel="Volatility (STD)",
             ylabel="Expected Returns",
@@ -244,16 +229,15 @@ class Portfolio:
         return fig, ax
 
     def random_portfolio(self):
-        n = 10000
-        annualized = 252
+        n = 100000
         returns_np = self.data_returns.to_numpy()
         cov = self.data_returns.cov().to_numpy()
         r_list = []
         for i in range(n):
             w_rand = np.random.random((1, cov.shape[0]))
             w_rand = w_rand / w_rand.sum()
-            r = returns_np.dot(w_rand.T).mean() * annualized
-            c = np.sqrt(w_rand.dot(cov).dot(w_rand.T))[0][0] * np.sqrt(annualized)
+            r = returns_np.dot(w_rand.T).mean()
+            c = np.sqrt(w_rand.dot(cov).dot(w_rand.T))[0][0]
             r_list.append({"mean": r, "std": c})
         return pd.DataFrame(r_list)
 

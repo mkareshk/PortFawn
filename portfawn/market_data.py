@@ -29,7 +29,6 @@ class MarketData:
         self.date_end = date_end
         self.col_price = col_price
         self.path_data = path_data
-        self.path_metrics = self.path_data / Path("metrics")
 
         self.asset_list = list(self.tickers.values())
         self.tickers_inv = {v: k for k, v in self.tickers.items()}
@@ -37,27 +36,24 @@ class MarketData:
         self.plot = Plot()
 
         # make the dates standard
+        fmt = "%Y-%m-%d"
         if type(date_start) != type(date_end):
             raise ValueError(
                 f"date_start ({type(date_start)}) and "
                 f"date_end ({type(date_end)}) should have the same type"
             )
 
-        elif isinstance(self.date_start, str) and isinstance(self.date_end, str):
+        elif isinstance(self.date_start, str):
             self.date_start_str = self.date_start
             self.date_end_str = self.date_end
-            self.date_start = datetime.datetime.strptime(
-                self.date_start, "%Y-%m-%d"
-            ).date()
-            self.date_end = datetime.datetime.strptime(self.date_end, "%Y-%m-%d").date()
+            self.date_start = datetime.datetime.strptime(self.date_start, fmt).date()
+            self.date_end = datetime.datetime.strptime(self.date_end, fmt).date()
 
-        elif isinstance(self.date_start, datetime.date) and isinstance(
-            self.date_end, datetime.date
-        ):
+        elif isinstance(self.date_start, datetime.date):
             self.date_start = self.date_start
             self.date_end = self.date_end
-            self.date_start_str = self.date_start.strftime("%Y-%m-%d")
-            self.date_end_str = self.date_start.strftime("%Y-%m-%d")
+            self.date_start_str = self.date_start.strftime(fmt)
+            self.date_end_str = self.date_start.strftime(fmt)
 
         else:
             raise ValueError(
@@ -72,11 +68,17 @@ class MarketData:
 
         # retrieve the data
         self.collect()
+
+        # change column names from tickers to asset names
         self._data_prices.columns = [
             self.tickers_inv[i] for i in self._data_prices.columns
         ]
+
+        # calculate returns
         self._data_returns = self._data_prices.pct_change().dropna()
         self._data_cum_returns = (self._data_returns + 1).cumprod() - 1
+
+        # mean-std
         self._mean_std = pd.DataFrame(columns=["mean", "std"])
         self._mean_std["mean"] = self._data_returns.mean()
         self._mean_std["std"] = self._data_returns.std()
@@ -148,9 +150,9 @@ class MarketData:
     def plot_returns(self, alpha=1):
         fig, ax = self.plot.plot_trend(
             df=self.data_returns,
-            title="Daily Returns",
+            title="Assets' Daily Returns",
             xlabel="Date",
-            ylabel="DailyReturns",
+            ylabel="Daily Returns",
             alpha=alpha,
         )
         return fig, ax
@@ -158,7 +160,7 @@ class MarketData:
     def plot_cum_returns(self):
         fig, ax = self.plot.plot_trend(
             df=self.data_cum_returns,
-            title="Cumulative Returns",
+            title="Assets' Cumulative Returns",
             xlabel="Date",
             ylabel="Returns",
         )
@@ -167,9 +169,10 @@ class MarketData:
     def plot_dist_returns(self):
         fig, ax = self.plot.plot_box(
             df=100 * self.data_returns,
-            title=f"Distribution of Daily Returns",
+            title=f"Distribution of Assets' Daily Returns",
             xlabel="Assets",
             ylabel=f"Returns",
+            figsize=(15, 8),
         )
         return fig, ax
 
@@ -177,7 +180,7 @@ class MarketData:
         fig, ax = self.plot.plot_heatmap(
             df=self.data_returns,
             relation_type="corr",
-            title="Portfolio Correlation",
+            title="Assets' Correlations",
             annotate=True,
         )
         return fig, ax
@@ -186,7 +189,7 @@ class MarketData:
         fig, ax = self.plot.plot_heatmap(
             df=self.data_returns,
             relation_type="cov",
-            title="Portfolio Covariance",
+            title="Assets' Covariance",
             annotate=True,
         )
         return fig, ax

@@ -46,6 +46,10 @@ class Plot:
         t = np.fabs(df.to_numpy())
         t = t[t > 0]
         ax.set_yscale("symlog", linthresh=min(t))
+        import matplotlib
+
+        # for axis in [ax.xaxis, ax.yaxis]:
+        #     axis.set_major_formatter(LogFormatter())
 
         ax.set_xlabel(xlabel)
         plt.grid(True, axis="y")
@@ -170,8 +174,8 @@ class Plot:
 
         for i, point in df.iterrows():
             ax.text(
-                point["std"] - x_diff * 0.05,
-                point["mean"] + y_diff * 0.05,
+                point["std"] - x_diff * 0.1,
+                point["mean"] + y_diff * 0.03,
                 i,
                 fontsize=14,
             )
@@ -253,9 +257,9 @@ class Plot:
         y = conc.values[:, 0]
         hull = ConvexHull(conc.values)
 
-        vertices = [v for v in hull.vertices[5:] if y[v] > l["mean"]]
+        vertices = [v for v in hull.vertices[3:] if y[v] > l["mean"]]
 
-        plt.plot(x[vertices], y[vertices], "k--")
+        plt.plot(x[vertices], y[vertices], "k--", linewidth=2, alpha=0.8)
 
         x_min, x_max = df_1["std"].min(), df_1["std"].max()
         x_diff = x_max - x_min
@@ -285,8 +289,8 @@ class Plot:
         ax.set_ylabel(ylabel)
         ax.set_title(title)
 
-        # ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
-        # ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
+        ax.set_xlim(left=x_min - 0.3 * x_diff, right=x_max + 0.3 * x_diff)
+        ax.set_ylim(bottom=y_min - 0.3 * y_diff, top=y_max + 0.3 * y_diff)
         fig.tight_layout()
 
         return fig, ax
