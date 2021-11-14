@@ -141,16 +141,16 @@ class MarketData:
     def plot_prices(self):
         fig, ax = self.plot.plot_trend(
             df=self._data_prices,
-            title="Asset Prices",
+            title="",
             xlabel="Date",
-            ylabel="Price",
+            ylabel="Price (US$)",
         )
         return fig, ax
 
     def plot_returns(self, alpha=1):
         fig, ax = self.plot.plot_trend(
             df=self.data_returns,
-            title="Assets' Daily Returns",
+            title="",
             xlabel="Date",
             ylabel="Daily Returns",
             alpha=alpha,
@@ -160,19 +160,20 @@ class MarketData:
     def plot_cum_returns(self):
         fig, ax = self.plot.plot_trend(
             df=self.data_cum_returns,
-            title="Assets' Cumulative Returns",
+            title="",
             xlabel="Date",
-            ylabel="Returns",
+            ylabel="Cumulative Returns",
         )
         return fig, ax
 
     def plot_dist_returns(self):
         fig, ax = self.plot.plot_box(
             df=100 * self.data_returns,
-            title=f"Distribution of Assets' Daily Returns",
+            title=f"",
             xlabel="Assets",
             ylabel=f"Returns",
             figsize=(15, 8),
+            yscale="linear",
         )
         return fig, ax
 
@@ -180,7 +181,7 @@ class MarketData:
         fig, ax = self.plot.plot_heatmap(
             df=self.data_returns,
             relation_type="corr",
-            title="Assets' Correlations",
+            title="",
             annotate=True,
         )
         return fig, ax
@@ -189,7 +190,7 @@ class MarketData:
         fig, ax = self.plot.plot_heatmap(
             df=self.data_returns,
             relation_type="cov",
-            title="Assets' Covariance",
+            title="",
             annotate=True,
         )
         return fig, ax
@@ -209,7 +210,7 @@ class MarketData:
 
         fig, ax = self.plot.plot_scatter(
             df=ms,
-            title="Expected Returns vs. Volatility",
+            title="",
             xlabel="Volatility (STD)",
             ylabel="Expected Returns",
             colour=colour,

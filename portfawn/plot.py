@@ -29,7 +29,9 @@ class Plot:
         # log
         self.logger = logging.getLogger(__name__)
 
-    def plot_box(self, df, title="", xlabel="", ylabel="", figsize=(15, 8)):
+    def plot_box(
+        self, df, title="", xlabel="", ylabel="", figsize=(15, 8), yscale="symlog"
+    ):
         fig, ax = plt.subplots(figsize=figsize)
         df.plot.box(
             showfliers=False,
@@ -43,13 +45,12 @@ class Plot:
             ax=ax,
         )
 
-        t = np.fabs(df.to_numpy())
-        t = t[t > 0]
-        ax.set_yscale("symlog", linthresh=min(t))
-        import matplotlib
-
-        # for axis in [ax.xaxis, ax.yaxis]:
-        #     axis.set_major_formatter(LogFormatter())
+        if yscale == "linear":
+            ax.set_yscale(yscale)
+        else:
+            t = np.fabs(df.to_numpy())
+            t = t[t > 0]
+            ax.set_yscale(yscale, linthresh=min(t))
 
         ax.set_xlabel(xlabel)
         plt.grid(True, axis="y")
@@ -291,6 +292,29 @@ class Plot:
 
         ax.set_xlim(left=x_min - 0.3 * x_diff, right=x_max + 0.3 * x_diff)
         ax.set_ylim(bottom=y_min - 0.3 * y_diff, top=y_max + 0.3 * y_diff)
+        fig.tight_layout()
+
+        return fig, ax
+
+    def plot_scatter_seaborn(
+        self, data, x, y, hue, title="", xlabel="", ylabel="", figsize=(15, 8)
+    ):
+
+        fig, ax = plt.subplots(figsize=figsize)
+        sns.scatterplot(data=data, x=x, y=y, hue=hue, ax=ax, s=200, alpha=0.5)
+
+        x_min, x_max = data["std"].min(), data["std"].max()
+        x_diff = x_max - x_min
+        y_min, y_max = data["mean"].min(), data["mean"].max()
+        y_diff = y_max - y_min
+
+        plt.grid(True, axis="y")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+
+        ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
+        ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
         fig.tight_layout()
 
         return fig, ax
