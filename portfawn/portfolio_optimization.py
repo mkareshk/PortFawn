@@ -114,29 +114,20 @@ class PortfolioOptimization:
 
         # risk
         risk_term = np.triu(self.expected_risk, k=1)
-        risk_min, risk_max = risk_term.min(), risk_term.max()
-        risk_term = np.where(
-            risk_term != 0, (2 * (risk_term - risk_min) / (risk_max - risk_min)) - 1, 0
-        )
 
         # returns
         returns_term = np.zeros(self.expected_risk.shape, float)
-        np.fill_diagonal(returns_term, self.expected_return)
-        returns_min, returns_max = returns_term.min(), returns_term.max()
-
-        returns_term = np.where(
-            returns_term != 0,
-            (2 * (returns_term - returns_min) / (returns_max - returns_min)) - 1,
-            0,
-        )
+        np.fill_diagonal(returns_term, -self.expected_return)
 
         # Q
-        Q = risk_term - returns_term
+        Q = risk_term + returns_term
 
         # Sampling
         sampler = neal.SimulatedAnnealingSampler()
         samples = sampler.sample_qubo(Q)
 
         w = np.array(list(samples.first.sample.values())).reshape(self.weight_shape)
+        if not sum(w):
+            w = np.ones(self.weight_shape)
 
         return w

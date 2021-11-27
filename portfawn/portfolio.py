@@ -102,19 +102,19 @@ class Portfolio:
         portfolio_asset_total_return = portfolio_assets_cum_returns.iloc[-1, :]
         portfolio_total_return = portfolio_asset_total_return[self.portfolio_fitness]
         # volatility
-        portdolio_std = np.sqrt(w.T.dot(cov).dot(w))[0][0]
+        portdolio_sd = np.sqrt(w.T.dot(cov).dot(w))[0][0]
 
         # market
-        market_mean_std = pd.DataFrame(columns=["mean", "std"])
-        market_mean_std["mean"] = self.data_returns.mean()
-        market_mean_std["std"] = self.data_returns.std()
+        market_mean_sd = pd.DataFrame(columns=["mean", "sd"])
+        market_mean_sd["mean"] = self.data_returns.mean()
+        market_mean_sd["sd"] = self.data_returns.std()
 
         # portfolio
-        portfolio_mean_std = pd.DataFrame(
-            index=[self.portfolio_fitness], columns=["mean", "std"]
+        portfolio_mean_sd = pd.DataFrame(
+            index=[self.portfolio_fitness], columns=["mean", "sd"]
         )
-        portfolio_mean_std["mean"] = daily_return
-        portfolio_mean_std["std"] = portdolio_std
+        portfolio_mean_sd["mean"] = daily_return
+        portfolio_mean_sd["sd"] = portdolio_sd
 
         performance = {}
         performance.update(
@@ -126,13 +126,13 @@ class Portfolio:
                 "portfolio_total_return": portfolio_total_return,
                 "portfolio_asset_total_return": portfolio_asset_total_return,
                 "daily_return": daily_return,
-                "daily_std": portdolio_std,
+                "daily_sd": portdolio_sd,
                 "asset_weights_dict": self.asset_weights_dict,
                 "portfolio_config": self.portfolio_config,
-                "market_mean_std": market_mean_std,
-                "portfolio_mean_std": portfolio_mean_std,
-                "portfolio_asset_mean_std": pd.concat(
-                    [portfolio_mean_std, market_mean_std], axis=0
+                "market_mean_sd": market_mean_sd,
+                "portfolio_mean_sd": portfolio_mean_sd,
+                "portfolio_asset_mean_sd": pd.concat(
+                    [portfolio_mean_sd, market_mean_sd], axis=0
                 ),
             }
         )
@@ -150,7 +150,7 @@ class Portfolio:
         out_str = ""
         out_str += f"- asset_weights_dict:\n{w_str}\n\n"
         out_str += f"- daily_return:\n{p['daily_return']}\n\n"
-        out_str += f"- daily_std:\n{p['daily_std']}\n\n"
+        out_str += f"- daily_sd:\n{p['daily_sd']}\n\n"
         out_str += f"- portfolio_returns:\n{p['portfolio_returns']}\n\n"
         out_str += f"- portfolio_cum_returns:\n{p['portfolio_cum_returns']}\n\n"
 
@@ -177,11 +177,11 @@ class Portfolio:
 
     def plot_dist_returns(self):
         fig, ax = self.plot.plot_box(
-            df=100 * self.performance["portfolio_assets_returns"],
+            df=self.performance["portfolio_assets_returns"],
             title="",
             xlabel="Portfolio Fitness",
-            ylabel="Daily Returns (%)",
-            yscale="linear",
+            ylabel="Daily Returns",
+            yscale="symlog",
         )
         return fig, ax
 
@@ -204,38 +204,38 @@ class Portfolio:
         )
         return fig, ax
 
-    def plot_mean_std(
+    def plot_mean_sd(
         self,
         annualized=True,
         fig=None,
         ax=None,
     ):
 
-        market_mean_std = self.performance["market_mean_std"].copy()
-        portfolio_mean_std = self.performance["portfolio_mean_std"].copy()
-        random_mean_std = self.random_portfolio()
+        market_mean_sd = self.performance["market_mean_sd"].copy()
+        portfolio_mean_sd = self.performance["portfolio_mean_sd"].copy()
+        random_mean_sd = self.random_portfolio()
 
         if annualized:
-            market_mean_std["mean"] *= self.annualized_days
-            market_mean_std["std"] *= np.sqrt(self.annualized_days)
-            portfolio_mean_std["mean"] *= self.annualized_days
-            portfolio_mean_std["std"] *= np.sqrt(self.annualized_days)
-            random_mean_std["mean"] *= self.annualized_days
-            random_mean_std["std"] *= np.sqrt(self.annualized_days)
+            market_mean_sd["mean"] *= self.annualized_days
+            market_mean_sd["sd"] *= np.sqrt(self.annualized_days)
+            portfolio_mean_sd["mean"] *= self.annualized_days
+            portfolio_mean_sd["sd"] *= np.sqrt(self.annualized_days)
+            random_mean_sd["mean"] *= self.annualized_days
+            random_mean_sd["sd"] *= np.sqrt(self.annualized_days)
 
         fig, ax = self.plot.plot_scatter_portfolio_random(
-            df_1=market_mean_std,
-            df_2=portfolio_mean_std,
-            df_3=random_mean_std,
+            df_1=market_mean_sd,
+            df_2=portfolio_mean_sd,
+            df_3=random_mean_sd,
             title="",
-            xlabel="Volatility (STD)",
+            xlabel="Volatility (SD)",
             ylabel="Expected Returns",
         )
 
         return fig, ax
 
     def random_portfolio(self):
-        n = 100000
+        n = 1000
         returns_np = self.data_returns.to_numpy()
         cov = self.data_returns.cov().to_numpy()
         r_list = []
@@ -244,7 +244,7 @@ class Portfolio:
             w_rand = w_rand / w_rand.sum()
             r = returns_np.dot(w_rand.T).mean()
             c = np.sqrt(w_rand.dot(cov).dot(w_rand.T))[0][0]
-            r_list.append({"mean": r, "std": c})
+            r_list.append({"mean": r, "sd": c})
         return pd.DataFrame(r_list)
 
 
@@ -357,15 +357,15 @@ class BackTest:
                     "date_end": curr["date_end"],
                     "date": curr["date"],
                     "portfolio_daily_return": curr["daily_return"],
-                    "portfolio_daily_std": curr["daily_std"],
+                    "portfolio_daily_sd": curr["daily_sd"],
                     "portfolio_total_return": curr["portfolio_total_return"],
                     "portfolio_asset_total_return": curr[
                         "portfolio_asset_total_return"
                     ].to_dict(),
-                    "portfolio_asset_mean_std": curr[
-                        "portfolio_asset_mean_std"
+                    "portfolio_asset_mean_sd": curr[
+                        "portfolio_asset_mean_sd"
                     ].to_dict(),
-                    "portfolio_mean_std": curr["portfolio_mean_std"],
+                    "portfolio_mean_sd": curr["portfolio_mean_sd"],
                     "asset_weights_dict": curr["asset_weights_dict"],
                     "execution_time": curr["execution_time"],
                     "optimization_params": curr["optimization_params"],
@@ -398,7 +398,7 @@ class BackTest:
             [item for ind, item in profile_df["asset_weights_dict"].items()],
             index=profile_df["date"],
         )
-        self.mean_std = pd.concat([i for i in profile_df["portfolio_mean_std"]])
+        self.mean_sd = pd.concat([i for i in profile_df["portfolio_mean_sd"]])
 
     def run_iter(
         self,
@@ -408,7 +408,6 @@ class BackTest:
         date_start_testing,
         date_end_testing,
     ):
-        print(date_start_testing)
         # training
         t0 = time.time()
 
@@ -539,7 +538,7 @@ class BackTest:
     def plot_dist_returns(self):
 
         fig, ax = self.plot.plot_box(
-            df=100 * self.portfolio_returns_df,
+            df=self.portfolio_returns_df,
             title="",
             xlabel="Portfolio Fitness",
             ylabel="Daily Returns (%)",
@@ -579,25 +578,25 @@ class BackTest:
             title="",
             xlabel="Date",
             ylabel="Cumulative Returns",
-            yscale="linear",
+            yscale="symlog",
         )
         return fig, ax
 
-    def plot_mean_std(self, annualized=True):
+    def plot_mean_sd(self, annualized=True):
 
-        mean_std = self.mean_std.copy()
+        mean_sd = self.mean_sd.copy()
 
         if annualized:
-            mean_std["mean"] *= self.annualized_days
-            mean_std["std"] *= np.sqrt(self.annualized_days)
+            mean_sd["mean"] *= self.annualized_days
+            mean_sd["sd"] *= np.sqrt(self.annualized_days)
 
         fig, ax = self.plot.plot_scatter_seaborn(
-            data=mean_std,
+            data=mean_sd,
             y="mean",
-            x="std",
-            hue=mean_std.index,
+            x="sd",
+            hue=mean_sd.index,
             title="",
-            xlabel="Volatility (STD)",
+            xlabel="Volatility (SD)",
             ylabel="Expected Returns",
         )
         return fig, ax
@@ -634,7 +633,7 @@ class MultiPortoflio:
     def generate(self):
 
         # optimized portfolios
-        mean_std_list = []
+        mean_sd_list = []
 
         for portfolio_fitness in self.portfolio_fitness_list:
             portfolio = Portfolio(
@@ -646,18 +645,18 @@ class MultiPortoflio:
             )
             portfolio.optimize()
             portfolio.evaluate()
-            mean_std_list.append(portfolio.performance["portfolio_mean_std"])
+            mean_sd_list.append(portfolio.performance["portfolio_mean_sd"])
 
-        market_mean_std = portfolio.performance["market_mean_std"]
-        portfolio_mean_std = pd.concat(mean_std_list, axis=0)
+        market_mean_sd = portfolio.performance["market_mean_sd"]
+        portfolio_mean_sd = pd.concat(mean_sd_list, axis=0)
 
-        market_mean_std["mean"] *= self.annualized_days
-        market_mean_std["std"] *= np.sqrt(self.annualized_days)
-        portfolio_mean_std["mean"] *= self.annualized_days
-        portfolio_mean_std["std"] *= np.sqrt(self.annualized_days)
+        market_mean_sd["mean"] *= self.annualized_days
+        market_mean_sd["sd"] *= np.sqrt(self.annualized_days)
+        portfolio_mean_sd["mean"] *= self.annualized_days
+        portfolio_mean_sd["sd"] *= np.sqrt(self.annualized_days)
 
         # random portfolios
-        n = 100000
+        n = 1000
         returns_np = portfolio.data_returns.to_numpy()
         cov = portfolio.data_returns.cov().to_numpy()
         r_list = []
@@ -668,20 +667,20 @@ class MultiPortoflio:
             c = np.sqrt(w_rand.dot(cov).dot(w_rand.T))[0][0] * np.sqrt(
                 self.annualized_days
             )
-            r_list.append({"mean": r, "std": c})
-        mean_std_random = pd.DataFrame(r_list)
+            r_list.append({"mean": r, "sd": c})
+        mean_sd_random = pd.DataFrame(r_list)
 
-        self.market_mean_std = market_mean_std
-        self.portfolio_mean_std = portfolio_mean_std
-        self.mean_std_random = mean_std_random
+        self.market_mean_sd = market_mean_sd
+        self.portfolio_mean_sd = portfolio_mean_sd
+        self.mean_sd_random = mean_sd_random
 
     def plot_portfolio(self):
         fig, ax = self.plot.plot_scatter_portfolio_random(
-            df_1=self.market_mean_std,
-            df_2=self.portfolio_mean_std,
-            df_3=self.mean_std_random,
+            df_1=self.market_mean_sd,
+            df_2=self.portfolio_mean_sd,
+            df_3=self.mean_sd_random,
             title="Expected Returns vs. Volatility",
-            xlabel="Volatility (STD)",
+            xlabel="Volatility (SD)",
             ylabel="Expected Returns",
         )
         return fig, ax

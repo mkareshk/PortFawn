@@ -78,10 +78,10 @@ class MarketData:
         self._data_returns = self._data_prices.pct_change().dropna()
         self._data_cum_returns = (self._data_returns + 1).cumprod() - 1
 
-        # mean-std
-        self._mean_std = pd.DataFrame(columns=["mean", "std"])
-        self._mean_std["mean"] = self._data_returns.mean()
-        self._mean_std["std"] = self._data_returns.std()
+        # mean-sd
+        self._mean_sd = pd.DataFrame(columns=["mean", "sd"])
+        self._mean_sd["mean"] = self._data_returns.mean()
+        self._mean_sd["sd"] = self._data_returns.std()
 
     @property
     def data_returns(self):
@@ -96,8 +96,8 @@ class MarketData:
         return self._data_cum_returns
 
     @property
-    def mean_std(self):
-        return self._mean_std
+    def mean_sd(self):
+        return self._mean_sd
 
     def collect(self):
 
@@ -168,12 +168,12 @@ class MarketData:
 
     def plot_dist_returns(self):
         fig, ax = self.plot.plot_box(
-            df=100 * self.data_returns,
+            df=self.data_returns,
             title=f"",
             xlabel="Assets",
             ylabel=f"Returns",
             figsize=(15, 8),
-            yscale="linear",
+            yscale="symlog",
         )
         return fig, ax
 
@@ -195,23 +195,23 @@ class MarketData:
         )
         return fig, ax
 
-    def plot_mean_std(
+    def plot_mean_sd(
         self,
         annualized=True,
         colour="tab:blue",
         fig=None,
         ax=None,
     ):
-        ms = self._mean_std.copy()
+        ms = self._mean_sd.copy()
 
         if annualized:
             ms["mean"] *= 252
-            ms["std"] *= np.sqrt(252)
+            ms["sd"] *= np.sqrt(252)
 
         fig, ax = self.plot.plot_scatter(
             df=ms,
             title="",
-            xlabel="Volatility (STD)",
+            xlabel="Volatility (SD)",
             ylabel="Expected Returns",
             colour=colour,
             fig=fig,

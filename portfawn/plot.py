@@ -29,6 +29,24 @@ class Plot:
         # log
         self.logger = logging.getLogger(__name__)
 
+    def plot_violin(
+        self, df, title="", xlabel="", ylabel="", figsize=(15, 8), yscale="symlog"
+    ):
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.violinplot(dataset=df, showmeans=True, points=10000)
+        locs, labels = plt.xticks()
+        plt.xticks(locs, [""] + list(df.columns) + [""], rotation=45)
+        plt.grid(True, axis="y")
+        plt.grid(False, axis="x")
+        if yscale == "linear":
+            ax.set_yscale(yscale)
+        else:
+            plt.yscale("symlog", linthresh=0.001)
+        ax.set_xlabel(xlabel)
+        fig.tight_layout()
+
+        return fig, ax
+
     def plot_box(
         self, df, title="", xlabel="", ylabel="", figsize=(15, 8), yscale="symlog"
     ):
@@ -50,7 +68,7 @@ class Plot:
         else:
             t = np.fabs(df.to_numpy())
             t = t[t > 0]
-            ax.set_yscale(yscale, linthresh=min(t))
+            ax.set_yscale(yscale, linthresh=0.001)
 
         ax.set_xlabel(xlabel)
         plt.grid(True, axis="y")
@@ -66,12 +84,12 @@ class Plot:
 
         if relation_type == "corr":
             relations = df.corr()
-            annot_fmt = "0.1f"
+            annot_fmt = "0.2f"
             shift = 1
             vmin, vmax = -1, 1
         elif relation_type == "cov":
             relations = df.cov()
-            annot_fmt = "0.1g"
+            annot_fmt = "1.1g"
             shift = 1
             vmin, vmax = relations.min().min(), relations.max().max()
 
@@ -106,7 +124,14 @@ class Plot:
         return fig, ax
 
     def plot_trend(
-        self, df, title="", xlabel="", ylabel="", figsize=(15, 8), alpha=1, legend=True
+        self,
+        df,
+        title="",
+        xlabel="",
+        ylabel="",
+        figsize=(15, 8),
+        alpha=0.9,
+        legend=True,
     ):
         fig, ax = plt.subplots(figsize=figsize)
 
@@ -166,16 +191,16 @@ class Plot:
         if not ax:
             fig, ax = plt.subplots(figsize=figsize)
 
-        df.plot.scatter(x="std", y="mean", c=colour, ax=ax, s=200, alpha=0.8)
+        df.plot.scatter(x="sd", y="mean", c=colour, ax=ax, s=200, alpha=0.8)
 
-        x_min, x_max = df["std"].min(), df["std"].max()
+        x_min, x_max = df["sd"].min(), df["sd"].max()
         x_diff = x_max - x_min
         y_min, y_max = df["mean"].min(), df["mean"].max()
         y_diff = y_max - y_min
 
         for i, point in df.iterrows():
             ax.text(
-                point["std"] - x_diff * 0.1,
+                point["sd"] - x_diff * 0.03,
                 point["mean"] + y_diff * 0.03,
                 i,
                 fontsize=14,
@@ -204,25 +229,25 @@ class Plot:
     ):
         fig, ax = plt.subplots(figsize=figsize)
 
-        df_1.plot.scatter(x="std", y="mean", c=colours[0], ax=ax, s=200, alpha=0.8)
-        df_2.plot.scatter(x="std", y="mean", c=colours[1], ax=ax, s=200, alpha=0.8)
+        df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=200, alpha=0.8)
+        df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=200, alpha=0.8)
 
-        x_min, x_max = df_1["std"].min(), df_1["std"].max()
+        x_min, x_max = df_1["sd"].min(), df_1["sd"].max()
         x_diff = x_max - x_min
         y_min, y_max = df_1["mean"].min(), df_1["mean"].max()
         y_diff = y_max - y_min
 
         for i, point in df_1.iterrows():
             ax.text(
-                point["std"] - x_diff * 0.05,
-                point["mean"] + y_diff * 0.05,
+                point["sd"] - x_diff * 0.03,
+                point["mean"] + y_diff * 0.03,
                 i,
                 fontsize=14,
             )
         for i, point in df_2.iterrows():
             ax.text(
-                point["std"] - x_diff * 0.05,
-                point["mean"] + y_diff * 0.05,
+                point["sd"] - x_diff * 0.03,
+                point["mean"] + y_diff * 0.03,
                 i,
                 fontsize=14,
             )
@@ -251,47 +276,51 @@ class Plot:
         fig, ax = plt.subplots(figsize=figsize)
 
         conc = pd.concat([df_1, df_2, df_3], axis=0).dropna()
-        # hull = ConvexHull(conc.values)
 
-        l = conc.iloc[np.argmin(conc["std"]), :]
         x = conc.values[:, 1]
         y = conc.values[:, 0]
         hull = ConvexHull(conc.values)
 
-        vertices = [v for v in hull.vertices[3:] if y[v] > l["mean"]]
+        vertices = [
+            v
+            for v in np.hstack([hull.vertices, hull.vertices[0]])[
+                2 * len(df_1.columns) :
+            ]
+        ]
 
-        plt.plot(x[vertices], y[vertices], "k--", linewidth=2, alpha=0.8)
+        plt.plot(x[vertices], y[vertices], "k--", linewidth=2, alpha=0.4)
 
-        x_min, x_max = df_1["std"].min(), df_1["std"].max()
+        x_min, x_max = df_1["sd"].min(), df_1["sd"].max()
         x_diff = x_max - x_min
         y_min, y_max = df_1["mean"].min(), df_1["mean"].max()
         y_diff = y_max - y_min
 
-        df_1.plot.scatter(x="std", y="mean", c=colours[0], ax=ax, s=200, alpha=0.8)
-        df_2.plot.scatter(x="std", y="mean", c=colours[1], ax=ax, s=200, alpha=0.8)
-        df_3.plot.scatter(x="std", y="mean", c=colours[2], ax=ax, s=1, alpha=0.01)
+        df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=150, alpha=0.8)
+        df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=150, alpha=0.8)
+        df_3.plot.scatter(x="sd", y="mean", c=colours[2], ax=ax, s=5, alpha=0.0)
 
         for i, point in df_1.iterrows():
             ax.text(
-                point["std"] - x_diff * 0.05,
-                point["mean"] + y_diff * 0.05,
+                point["sd"] - x_diff * 0.03,
+                point["mean"] + y_diff * 0.03,
                 i,
                 fontsize=14,
             )
         for i, point in df_2.iterrows():
             ax.text(
-                point["std"] - x_diff * 0.05,
-                point["mean"] + y_diff * 0.05,
+                point["sd"] - x_diff * 0.02,
+                point["mean"] + y_diff * 0.03,
                 i,
                 fontsize=14,
             )
+
         plt.grid(True, axis="y")
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_title(title)
 
-        ax.set_xlim(left=x_min - 0.3 * x_diff, right=x_max + 0.3 * x_diff)
-        ax.set_ylim(bottom=y_min - 0.3 * y_diff, top=y_max + 0.3 * y_diff)
+        ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
+        ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
         fig.tight_layout()
 
         return fig, ax
@@ -303,7 +332,7 @@ class Plot:
         fig, ax = plt.subplots(figsize=figsize)
         sns.scatterplot(data=data, x=x, y=y, hue=hue, ax=ax, s=200, alpha=0.5)
 
-        x_min, x_max = data["std"].min(), data["std"].max()
+        x_min, x_max = data["sd"].min(), data["sd"].max()
         x_diff = x_max - x_min
         y_min, y_max = data["mean"].min(), data["mean"].max()
         y_diff = y_max - y_min
