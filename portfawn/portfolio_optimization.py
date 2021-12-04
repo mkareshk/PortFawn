@@ -30,10 +30,10 @@ class PortfolioOptimization:
 
     def optimize(self):
 
-        if self.portfolio_type == "Equal":
+        if self.portfolio_type == "EWP":
             w = np.ones(self.weight_shape)
 
-        elif self.portfolio_type in ["MR", "MV", "MSR"]:
+        elif self.portfolio_type in ["MRP", "MVP", "MSRP"]:
             w = self.real_value_weight()
 
         elif self.portfolio_type in ["SA"]:
@@ -52,7 +52,7 @@ class PortfolioOptimization:
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
         # reach a target return
-        if self.portfolio_type == "MR":
+        if self.portfolio_type == "MRP":
             constraints.append(
                 {
                     "type": "ineq",
@@ -62,7 +62,7 @@ class PortfolioOptimization:
             )
 
         # reach a target risk
-        elif self.portfolio_type == "MV":
+        elif self.portfolio_type == "MVP":
             constraints.append(
                 {
                     "type": "ineq",
@@ -71,15 +71,15 @@ class PortfolioOptimization:
                 }
             )
 
-        elif self.portfolio_type == "MSR":  # no additional constraint
+        elif self.portfolio_type == "MSRP":  # no additional constraint
             pass
 
         # optimization_type function
-        if self.portfolio_type == "MR":
+        if self.portfolio_type == "MRP":
             cost_function = self.cost_returns
-        elif self.portfolio_type == "MV":
+        elif self.portfolio_type == "MVP":
             cost_function = self.cost_std
-        elif self.portfolio_type == "MSR":
+        elif self.portfolio_type == "MSRP":
             cost_function = self.cost_sharpe_ratio
 
         # optimization
