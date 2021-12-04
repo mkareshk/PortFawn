@@ -11,10 +11,11 @@ sns.set()
 sns.set_style("whitegrid")
 
 # general configuration for matplotlib
+DEFAULT_SIZE = (15, 8)
 params = {
     "font.family": "serif",
     "legend.fontsize": "large",
-    "figure.figsize": (15, 8),
+    "figure.figsize": DEFAULT_SIZE,
     "axes.labelsize": "x-large",
     "axes.titlesize": "x-large",
     "xtick.labelsize": "large",
@@ -30,7 +31,7 @@ class Plot:
         self.logger = logging.getLogger(__name__)
 
     def plot_violin(
-        self, df, title="", xlabel="", ylabel="", figsize=(15, 8), yscale="symlog"
+        self, df, title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE, yscale="symlog"
     ):
         fig, ax = plt.subplots(figsize=figsize)
         ax.violinplot(dataset=df, showmeans=True, points=10000)
@@ -48,7 +49,7 @@ class Plot:
         return fig, ax
 
     def plot_box(
-        self, df, title="", xlabel="", ylabel="", figsize=(15, 8), yscale="symlog"
+        self, df, title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE, yscale="symlog"
     ):
         fig, ax = plt.subplots(figsize=figsize)
         df.plot.box(
@@ -78,7 +79,9 @@ class Plot:
 
         return fig, ax
 
-    def plot_heatmap(self, df, relation_type, title="", annotate=True, figsize=(15, 8)):
+    def plot_heatmap(
+        self, df, relation_type, title="", annotate=True, figsize=DEFAULT_SIZE
+    ):
 
         fig, ax = plt.subplots(figsize=figsize)
 
@@ -129,8 +132,8 @@ class Plot:
         title="",
         xlabel="",
         ylabel="",
-        figsize=(15, 8),
-        alpha=0.9,
+        figsize=DEFAULT_SIZE,
+        alpha=1.0,
         legend=True,
     ):
         fig, ax = plt.subplots(figsize=figsize)
@@ -161,7 +164,7 @@ class Plot:
         return fig, ax
 
     def plot_bar(
-        self, df, yscale="linear", title="", xlabel="", ylabel="", figsize=(15, 8)
+        self, df, yscale="linear", title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE
     ):
         fig, ax = plt.subplots(figsize=figsize)
         df.plot.bar(ax=ax, legend=False)
@@ -183,7 +186,7 @@ class Plot:
         title="",
         xlabel="",
         ylabel="",
-        figsize=(15, 8),
+        figsize=DEFAULT_SIZE,
         colour="tab:blue",
         fig=None,
         ax=None,
@@ -191,7 +194,7 @@ class Plot:
         if not ax:
             fig, ax = plt.subplots(figsize=figsize)
 
-        df.plot.scatter(x="sd", y="mean", c=colour, ax=ax, s=200, alpha=0.8)
+        df.plot.scatter(x="sd", y="mean", c=colour, ax=ax, s=200, alpha=1.0)
 
         x_min, x_max = df["sd"].min(), df["sd"].max()
         x_diff = x_max - x_min
@@ -224,13 +227,13 @@ class Plot:
         title="",
         xlabel="",
         ylabel="",
-        figsize=(15, 8),
+        figsize=DEFAULT_SIZE,
         colours=["tab:blue", "tab:red"],
     ):
         fig, ax = plt.subplots(figsize=figsize)
 
-        df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=200, alpha=0.8)
-        df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=200, alpha=0.8)
+        df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=200, alpha=1.0)
+        df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=200, alpha=1.0)
 
         x_min, x_max = df_1["sd"].min(), df_1["sd"].max()
         x_diff = x_max - x_min
@@ -270,7 +273,7 @@ class Plot:
         title="",
         xlabel="",
         ylabel="",
-        figsize=(15, 8),
+        figsize=DEFAULT_SIZE,
         colours=["tab:blue", "tab:red", "tab:green"],
     ):
         fig, ax = plt.subplots(figsize=figsize)
@@ -295,8 +298,8 @@ class Plot:
         y_min, y_max = df_1["mean"].min(), df_1["mean"].max()
         y_diff = y_max - y_min
 
-        df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=150, alpha=0.8)
-        df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=150, alpha=0.8)
+        df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=150, alpha=0.9)
+        df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=150, alpha=0.9)
         df_3.plot.scatter(x="sd", y="mean", c=colours[2], ax=ax, s=5, alpha=0.0)
 
         for i, point in df_1.iterrows():
@@ -326,7 +329,7 @@ class Plot:
         return fig, ax
 
     def plot_scatter_seaborn(
-        self, data, x, y, hue, title="", xlabel="", ylabel="", figsize=(15, 8)
+        self, data, x, y, hue, title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE
     ):
 
         fig, ax = plt.subplots(figsize=figsize)
