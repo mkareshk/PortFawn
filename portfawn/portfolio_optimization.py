@@ -36,7 +36,7 @@ class PortfolioOptimization:
         elif self.portfolio_type in ["MRP", "MVP", "MSRP"]:
             w = self.real_value_weight()
 
-        elif self.portfolio_type in ["SA"]:
+        elif self.portfolio_type in ["BMOP"]:
             w = self.binary_value_weight()
 
         return self.normalized(w)  # sum(w) = 1, invest all capital
@@ -123,7 +123,9 @@ class PortfolioOptimization:
         Q = risk_term + returns_term
 
         # Sampling
+        from dwave.system import DWaveCliqueSampler, DWaveSampler
         sampler = neal.SimulatedAnnealingSampler()
+        sampler = DWaveCliqueSampler()
         samples = sampler.sample_qubo(Q)
 
         w = np.array(list(samples.first.sample.values())).reshape(self.weight_shape)
