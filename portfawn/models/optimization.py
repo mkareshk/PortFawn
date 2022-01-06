@@ -1,12 +1,92 @@
-import time
-
 import neal
-import dimod
 import numpy as np
 import scipy.optimize as sco
-from sklearn.preprocessing import MinMaxScaler
+from dwave.system import DWaveCliqueSampler
 
-# from dwave.system import DWaveSampler, EmbeddingComposite
+
+class QuantumOptModel:
+    def __init__(self, backend: str = "neal", annealing_time: int = 100) -> None:
+
+        self._type = "quantum"
+
+        self._backend = backend
+        self._annealing_time = annealing_time
+
+        if self._backend == "neal":
+            self._sampler = neal.SimulatedAnnealingSampler()
+        elif self._backend == "qpu":
+            self._sampler = DWaveCliqueSampler()
+        else:
+            raise NotImplementedError
+
+    def optimize(self, risk_model):
+
+        # risk
+        risk_term = np.triu(risk_model.expected_risk, k=1)
+
+        # returns
+        returns_term = np.zeros(risk_model.expected_risk.shape, float)
+        np.fill_diagonal(returns_term, -risk_model.expected_returns)
+
+        # Q
+        Q = risk_term + returns_term
+
+        # Sampling
+        samples = self._sampler.sample_qubo(Q)
+
+        w = np.array(list(samples.first.sample.values())).reshape(self.weight_shape)
+        if not sum(w):
+            w = np.ones(self.weight_shape)
+
+        self._asset_weights = w / np.sum(w)
+
+    @property
+    def params(self):
+        return {"annealing_time": self._annealing_time}
+
+    @property
+    def type(self):
+        self._type
+
+    @property
+    def asset_weights(self):
+        self._asset_weights
+
+
+class ClassicOptParams:
+    def __init__(
+        self,
+        max_iter: int = 1000,
+        disp: bool = False,
+        ftol: float = 1e-10,
+        target_return: float = 0.1,
+        target_risk: float = 0.1,
+        weight_bound: tuple = (0.0, 1.0),
+    ) -> None:
+
+        self._type = "classic"
+
+        self._max_iter = max_iter
+        self._disp = disp
+        self._ftol = ftol
+        self._target_return = target_return
+        self._target_risk = target_risk
+        self._weight_bound = weight_bound
+
+    @property
+    def params(self):
+        return {
+            "maxiter": self._max_iter,
+            "disp": self._disp,
+            "ftol": self._ftol,
+            "target_return": self._target_return,
+            "target_risk": self._target_risk,
+            "weight_bound": self._weight_bound,
+        }
+
+    @property
+    def type(self):
+        self._type
 
 
 class PortfolioOptimization:
@@ -109,27 +189,3 @@ class PortfolioOptimization:
 
     def cost_std(self, weights):
         return np.sqrt(weights.T.dot(self.expected_risk).dot(weights))
-
-    def binary_value_weight(self):
-
-        # risk
-        risk_term = np.triu(self.expected_risk, k=1)
-
-        # returns
-        returns_term = np.zeros(self.expected_risk.shape, float)
-        np.fill_diagonal(returns_term, -self.expected_return)
-
-        # Q
-        Q = risk_term + returns_term
-
-        # Sampling
-        from dwave.system import DWaveCliqueSampler, DWaveSampler
-        sampler = neal.SimulatedAnnealingSampler()
-        sampler = DWaveCliqueSampler()
-        samples = sampler.sample_qubo(Q)
-
-        w = np.array(list(samples.first.sample.values())).reshape(self.weight_shape)
-        if not sum(w):
-            w = np.ones(self.weight_shape)
-
-        return w

@@ -18,50 +18,32 @@ logger = logging.getLogger(__name__)
 
 
 class Portfolio:
-    def __init__(self, **portfolio_config):
+    def __init__(
+        self,
+        name: str,
+        fitness: str,
+        returns: pd.DataFrame,
+        opt_params,
+        risk_model,
+        economic_model,
+        init_asset_weights,
+    ):
 
         # args
-        self.portfolio_config = portfolio_config
-        self.portfolio_fitness = portfolio_config["portfolio_fitness"]
-        self.data_returns = portfolio_config["data_returns"]
-        self.optimization_params = portfolio_config.get(
-            "optimization_params",
-            {
-                "scipy_params": {
-                    "maxiter": 1000,
-                    "disp": False,
-                    "ftol": 1e-10,
-                },
-                "target_return": 0.1,
-                "target_risk": 0.1,
-                "weight_bound": (0.0, 1.0),
-            },
-        )
-        self.sampling_params = portfolio_config.get(
-            "sampling_params", {"type": "standard"}
-        )
-        self.risk_free_rate = portfolio_config.get("risk_free_rate", 0.0)
-        self.asset_weights = portfolio_config.get("asset_weights", None)
-        self.annualized_days = 252
+        self.name = name
+        self.fitness = fitness
+        self.returns = returns
+        self.opt_params = opt_params
+        self.sampling_model = risk_model
+        self.economic_factors = economic_model
+        self.init_asset_weights = init_asset_weights
 
         # other params
         self.asset_list = list(self.data_returns.columns)
         self.date_start = self.data_returns.index[0]
         self.date_end = self.data_returns.index[-1]
-        self.plot = Plot()
 
     def optimize(self):
-        if self.asset_weights:
-            raise Exception(
-                f"The portfolio weights have already set, {self.asset_weights}"
-            )
-
-        # sampling
-        self.expected_stats = Sampling(
-            data_returns=self.data_returns, sampling_params=self.sampling_params
-        )
-        expected_return = self.expected_stats.expected_return
-        expected_risk = self.expected_stats.expected_risk
 
         # optimization
         self.optimizer = PortfolioOptimization(
