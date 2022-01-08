@@ -1,18 +1,26 @@
 import hashlib
 import json
 import logging
+from os import error
 import time
 from pathlib import Path
 
+import dafin
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from dafin import Returns
 
-from portfawn.sampling import Sampling
-from portfawn.market_data import MarketData
+# from portfawn.sampling import Sampling
+# from portfawn.market_data import MarketData
 from portfawn.plot import Plot
-from portfawn.portfolio_optimization import PortfolioOptimization
+
+# from portfawn.portfolio_optimization import PortfolioOptimization
 from portfawn.utils import get_assets_signature, is_jsonable
+
+from portfawn.models.risk import RiskModel
+from portfawn.models.optimization import QuantumOptModel, ClassicOptModel
+from portfawn.models.economic import EconomicModel
 
 logger = logging.getLogger(__name__)
 
@@ -21,110 +29,167 @@ class Portfolio:
     def __init__(
         self,
         name: str,
-        fitness: str,
-        returns: pd.DataFrame,
-        opt_params,
-        risk_model,
-        economic_model,
-        init_asset_weights,
+        objective: str,
+        risk_type="standard",
+        risk_sample_num=100,
+        risk_sample_size=20,
+        risk_agg_func="median",
+        risk_free_rate=0.0,
+        annualized_days=252,
+        backend="neal",
+        annealing_time=100,
+        scipy_params={"maxiter": 1000, "disp": False, "ftol": 1e-10},
+        target_return=0.1,
+        target_sd=0.1,
+        weight_bound=(0.0, 1.0),
+        init_point=None,
     ):
 
         # args
-        self.name = name
-        self.fitness = fitness
-        self.returns = returns
-        self.opt_params = opt_params
-        self.sampling_model = risk_model
-        self.economic_factors = economic_model
-        self.init_asset_weights = init_asset_weights
+        self._name = name
+        self._objective = objective
+        self._risk_type = risk_type
+        self._risk_sample_num = risk_sample_num
+        self._risk_sample_size = risk_sample_size
+        self._risk_agg_func = risk_agg_func
+        self._risk_free_rate = risk_free_rate
+        self._annualized_days = annualized_days
+        self._backend = backend
+        self._annealing_time = annealing_time
+        self._scipy_params = scipy_params
+        self._target_return = target_return
+        self._target_sd = target_sd
+        self._weight_bound = weight_bound
+        self._init_point = init_point
 
-        # other params
-        self.asset_list = list(self.data_returns.columns)
-        self.date_start = self.data_returns.index[0]
-        self.date_end = self.data_returns.index[-1]
-
-    def optimize(self):
-
-        # optimization
-        self.optimizer = PortfolioOptimization(
-            self.portfolio_fitness,
-            expected_return=expected_return,
-            expected_risk=expected_risk,
-            risk_free_rate=self.risk_free_rate,
-            optimization_params=self.optimization_params,
-        )
-        self.asset_weights = self.optimizer.optimize()
-
-    def evaluate(self):
-
-        w = self.asset_weights
-        returns_np = self.data_returns.to_numpy()
-        cov = self.data_returns.cov().to_numpy()
-
-        self.asset_weights_dict = {
-            self.asset_list[ind]: float(w) for ind, w in enumerate(self.asset_weights)
+        self._config = {
+            "name": name,
+            "objective": objective,
+            "risk_type": risk_type,
+            "risk_sample_num": risk_sample_num,
+            "risk_sample_size": risk_sample_size,
+            "risk_agg_func": risk_agg_func,
+            "risk_free_rate": risk_free_rate,
+            "annualized_days": annualized_days,
+            "backend": backend,
+            "annealing_time": annealing_time,
+            "scipy_params": scipy_params,
+            "target_return": target_return,
+            "target_sd": target_sd,
+            "weight_bound": weight_bound,
+            "init_point": init_point,
         }
 
-        # returns
+        # risk model
+        self._risk_model = RiskModel(
+            type=self._risk_type,
+            sample_num=self._risk_sample_num,
+            sample_size=self._risk_sample_size,
+            agg_func=self._risk_agg_func,
+        )
+
+        # economic model
+        self._economic_model = EconomicModel(
+            risk_free_rate=self._risk_free_rate, annualized_days=self._annualized_days
+        )
+
+        # optimization model
+        if self._objective in ["BMOP"]:
+            self._optimizer = QuantumOptModel(
+                objective=self._objective,
+                backend=self._backend,
+                annealing_time=self._annealing_time,
+            )
+
+        elif self._objective in ["EWP", "MRP", "MVP", "MSRP"]:
+            self._optimizer = ClassicOptModel(
+                objective=self._objective,
+                economic_model=self._economic_model,
+                scipy_params=self._scipy_params,
+                target_return=self._target_return,
+                target_sd=self._target_sd,
+                weight_bound=self._weight_bound,
+                init_point=self._init_point,
+            )
+
+        else:
+            raise NotImplementedError
+
+    def run(self, asset_list, date_start="2010-01-01", date_end="2021-12-31"):
+
+        # returns data
+        returns_data = Returns(
+            asset_list=asset_list,
+            date_start=date_start,
+            date_end=date_end,
+        )
+
+        asset_returns = returns_data.returns
+        asset_cum_returns = returns_data.cum_returns
+        asset_cov = asset_returns.cov()
+
+        # risk evaluation
+        expected_return, expected_cov = self._risk_model.evaluate(returns_data)
+        expected_return_np = expected_return.to_numpy()
+        expected_cov_np = expected_cov.to_numpy()
+
+        # optimization
+        w = self._optimizer.optimize(
+            expected_return=expected_return, expected_cov=expected_cov
+        )
+        asset_weights = {asset_list[ind]: float(w) for ind, w in enumerate(w)}
+
+        ## performance metrics
+
+        # portfolio daily returns
         portfolio_returns = pd.DataFrame(
-            returns_np.dot(w),
-            index=self.data_returns.index,
-            columns=[self.portfolio_fitness],
+            asset_returns.dot(w),
+            index=asset_returns.index,
+            columns=[self._objective],
         )
-        daily_return = portfolio_returns.mean().values[0]
+        portfolio_assets_returns = pd.concat([asset_returns, portfolio_returns], axis=1)
+
+        # portfolio cummulative return
         portfolio_cum_returns = (portfolio_returns + 1).cumprod() - 1
-        assets_cum_returns = (self.data_returns + 1).cumprod() - 1
-        portfolio_assets_returns = pd.concat(
-            [portfolio_returns, self.data_returns], axis=1
-        )
         portfolio_assets_cum_returns = pd.concat(
-            [portfolio_cum_returns, assets_cum_returns], axis=1
+            [asset_cum_returns, portfolio_cum_returns], axis=1
         )
+
+        # total returns
 
         portfolio_asset_total_return = portfolio_assets_cum_returns.iloc[-1, :]
-        portfolio_total_return = portfolio_asset_total_return[self.portfolio_fitness]
-        # volatility
-        portdolio_sd = np.sqrt(w.T.dot(cov).dot(w))[0][0]
+        portfolio_total_return = portfolio_asset_total_return[self._objective]
 
-        # market
-        market_mean_sd = pd.DataFrame(columns=["mean", "sd"])
-        market_mean_sd["mean"] = self.data_returns.mean()
-        market_mean_sd["sd"] = self.data_returns.std()
+        # portfolio expected return and sd
+        portfolio_expected_return = expected_return_np.dot(w)
+        portfolio_expected_sd = np.sqrt(w.T.dot(expected_cov_np).dot(w))
 
-        # portfolio
-        portfolio_mean_sd = pd.DataFrame(
-            index=[self.portfolio_fitness], columns=["mean", "sd"]
-        )
-        portfolio_mean_sd["mean"] = daily_return
-        portfolio_mean_sd["sd"] = portdolio_sd
+        # returns-sd space
+        mean_sd = pd.DataFrame(columns=["mean", "sd"])
+        mean_sd["mean"] = portfolio_expected_return
+        mean_sd["sd"] = portfolio_expected_sd
+        mean_sd = pd.concat([returns_data.mean_sd, mean_sd], axis=1)
 
         performance = {}
         performance.update(
             {
+                "asset_weights": asset_weights,
                 "portfolio_returns": portfolio_returns,
+                "portfolio_assets_returns": portfolio_assets_returns,
                 "portfolio_cum_returns": portfolio_cum_returns,
                 "portfolio_assets_cum_returns": portfolio_assets_cum_returns,
-                "portfolio_assets_returns": portfolio_assets_returns,
-                "portfolio_total_return": portfolio_total_return,
                 "portfolio_asset_total_return": portfolio_asset_total_return,
-                "daily_return": daily_return,
-                "daily_sd": portdolio_sd,
-                "asset_weights_dict": self.asset_weights_dict,
-                "portfolio_config": self.portfolio_config,
-                "market_mean_sd": market_mean_sd,
-                "portfolio_mean_sd": portfolio_mean_sd,
-                "portfolio_asset_mean_sd": pd.concat(
-                    [portfolio_mean_sd, market_mean_sd], axis=0
-                ),
+                "portfolio_total_return": portfolio_total_return,
+                "portfolio_expected_return": portfolio_expected_return,
+                "portfolio_expected_sd": portfolio_expected_sd,
+                "mean_sd": mean_sd,
+                "portfolio_config": self._config,
             }
         )
 
-        self.performance = performance
+        return performance
 
     def __str__(self):
-
-        if not self.performance:
-            raise Exception("The portfolio.evaluate() methos should call first.")
 
         p = self.performance.copy()
         w_str = json.dumps(p["asset_weights_dict"], sort_keys=True, indent=4)
