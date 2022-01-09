@@ -1,19 +1,16 @@
 import pytest
 
-from portfawn.portfolio.portfolio import Portfolio
+from portfawn.portfolio.portfolio import Portfolio, PortfolioParams
 from portfawn.plot.portfolio import PlotPortfolio
-
-asset_list = ["SPY", "GLD"]
-
-quantum_objectives = ["BMOP"]
-classic_objectives = ["EWP", "MRP", "MVP", "MSRP"]
-objectives = quantum_objectives  # + classic_objectives
+from utils import ASSET_LIST, OBJECTIVES
 
 
-@pytest.mark.parametrize("objective", objectives, ids=objectives)
+@pytest.mark.parametrize("objective", OBJECTIVES, ids=OBJECTIVES)
 def test_portfolio(objective):
-    portfolio = Portfolio(name=objective, objective=objective)
-    portfolio_result = portfolio.run(asset_list=asset_list)
+
+    portfolio_params = PortfolioParams(name=objective, objective=objective)
+    portfolio = Portfolio(portfolio_params)
+    portfolio_result = portfolio.run(asset_list=ASSET_LIST)
 
     plot_portfolio = PlotPortfolio(portfolio_result)
 

@@ -3,9 +3,10 @@ import pandas as pd
 from dafin import Returns
 
 from portfawn.models.risk import RiskModel
+from utils import ASSET_LIST
 
 
-returns_data = Returns(asset_list=["AAPL", "TSLA"])
+returns_data = Returns(asset_list=ASSET_LIST)
 
 
 def test_risk_model_change_parms():
@@ -30,5 +31,5 @@ def test_risk_model_standard(evaluation_type):
     assert risk_model.type == evaluation_type
     assert isinstance(expected_returns, pd.Series)
     assert isinstance(expected_cov, pd.DataFrame)
-    assert expected_returns.shape == (2,)
-    assert expected_cov.shape == (2, 2)
+    assert expected_returns.shape == (3,)
+    assert expected_cov.shape == (3, 3)

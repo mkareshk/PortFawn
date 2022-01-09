@@ -12,11 +12,11 @@ from portfawn.models.economic import EconomicModel
 logger = logging.getLogger(__name__)
 
 
-class Portfolio:
+class PortfolioParams:
     def __init__(
         self,
-        name: str,
-        objective: str,
+        name: str = "",
+        objective: str = "",
         risk_type="standard",
         risk_sample_num=100,
         risk_sample_size=20,
@@ -33,70 +33,78 @@ class Portfolio:
     ):
 
         # args
-        self._name = name
-        self._objective = objective
-        self._risk_type = risk_type
-        self._risk_sample_num = risk_sample_num
-        self._risk_sample_size = risk_sample_size
-        self._risk_agg_func = risk_agg_func
-        self._risk_free_rate = risk_free_rate
-        self._annualized_days = annualized_days
-        self._backend = backend
-        self._annealing_time = annealing_time
-        self._scipy_params = scipy_params
-        self._target_return = target_return
-        self._target_sd = target_sd
-        self._weight_bound = weight_bound
-        self._init_point = init_point
+        self.name = name
+        self.objective = objective
+        self.risk_type = risk_type
+        self.risk_sample_num = risk_sample_num
+        self.risk_sample_size = risk_sample_size
+        self.risk_agg_func = risk_agg_func
+        self.risk_free_rate = risk_free_rate
+        self.annualized_days = annualized_days
+        self.backend = backend
+        self.annealing_time = annealing_time
+        self.scipy_params = scipy_params
+        self.target_return = target_return
+        self.target_sd = target_sd
+        self.weight_bound = weight_bound
+        self.init_point = init_point
+
+
+class Portfolio:
+    def __init__(self, portfolio_params):
+
+        # args
+        self.portfolio_params = portfolio_params
 
         self._config = {
-            "name": name,
-            "objective": objective,
-            "risk_type": risk_type,
-            "risk_sample_num": risk_sample_num,
-            "risk_sample_size": risk_sample_size,
-            "risk_agg_func": risk_agg_func,
-            "risk_free_rate": risk_free_rate,
-            "annualized_days": annualized_days,
-            "backend": backend,
-            "annealing_time": annealing_time,
-            "scipy_params": scipy_params,
-            "target_return": target_return,
-            "target_sd": target_sd,
-            "weight_bound": weight_bound,
-            "init_point": init_point,
+            "name": self.portfolio_params.name,
+            "objective": self.portfolio_params.objective,
+            "risk_type": self.portfolio_params.risk_type,
+            "risk_sample_num": self.portfolio_params.risk_sample_num,
+            "risk_sample_size": self.portfolio_params.risk_sample_size,
+            "risk_agg_func": self.portfolio_params.risk_agg_func,
+            "risk_free_rate": self.portfolio_params.risk_free_rate,
+            "annualized_days": self.portfolio_params.annualized_days,
+            "backend": self.portfolio_params.backend,
+            "annealing_time": self.portfolio_params.annealing_time,
+            "scipy_params": self.portfolio_params.scipy_params,
+            "target_return": self.portfolio_params.target_return,
+            "target_sd": self.portfolio_params.target_sd,
+            "weight_bound": self.portfolio_params.weight_bound,
+            "init_point": self.portfolio_params.init_point,
         }
 
         # risk model
         self._risk_model = RiskModel(
-            type=self._risk_type,
-            sample_num=self._risk_sample_num,
-            sample_size=self._risk_sample_size,
-            agg_func=self._risk_agg_func,
+            type=self.portfolio_params.risk_type,
+            sample_num=self.portfolio_params.risk_sample_num,
+            sample_size=self.portfolio_params.risk_sample_size,
+            agg_func=self.portfolio_params.risk_agg_func,
         )
 
         # economic model
         self._economic_model = EconomicModel(
-            risk_free_rate=self._risk_free_rate, annualized_days=self._annualized_days
+            risk_free_rate=self.portfolio_params.risk_free_rate,
+            annualized_days=self.portfolio_params.annualized_days,
         )
 
         # optimization model
-        if self._objective in ["BMOP"]:
-            self._optimizer = QuantumOptModel(
-                objective=self._objective,
-                backend=self._backend,
-                annealing_time=self._annealing_time,
+        if self.portfolio_params.objective in ["BMOP"]:
+            self.portfolio_params.optimizer = QuantumOptModel(
+                objective=self.portfolio_params.objective,
+                backend=self.portfolio_params.backend,
+                annealing_time=self.portfolio_params.annealing_time,
             )
 
-        elif self._objective in ["EWP", "MRP", "MVP", "MSRP"]:
-            self._optimizer = ClassicOptModel(
-                objective=self._objective,
+        elif self.portfolio_params.objective in ["EWP", "MRP", "MVP", "MSRP"]:
+            self.portfolio_params.optimizer = ClassicOptModel(
+                objective=self.portfolio_params.objective,
                 economic_model=self._economic_model,
-                scipy_params=self._scipy_params,
-                target_return=self._target_return,
-                target_sd=self._target_sd,
-                weight_bound=self._weight_bound,
-                init_point=self._init_point,
+                scipy_params=self.portfolio_params.scipy_params,
+                target_return=self.portfolio_params.target_return,
+                target_sd=self.portfolio_params.target_sd,
+                weight_bound=self.portfolio_params.weight_bound,
+                init_point=self.portfolio_params.init_point,
             )
 
         else:
@@ -121,7 +129,7 @@ class Portfolio:
         expected_cov_np = expected_cov.to_numpy()
 
         # optimization
-        w = self._optimizer.optimize(
+        w = self.portfolio_params.optimizer.optimize(
             expected_return=expected_return, expected_cov=expected_cov
         )
         asset_weights = {asset_list[ind]: float(w) for ind, w in enumerate(w)}
@@ -132,7 +140,7 @@ class Portfolio:
         portfolio_returns = pd.DataFrame(
             asset_returns.to_numpy().dot(w),
             index=asset_returns.index,
-            columns=[self._objective],
+            columns=[self.portfolio_params.objective],
         )
         portfolio_assets_returns = pd.concat([asset_returns, portfolio_returns], axis=1)
 
@@ -145,7 +153,9 @@ class Portfolio:
         # total returns
 
         portfolio_asset_total_return = portfolio_assets_cum_returns.iloc[-1, :]
-        portfolio_total_return = portfolio_asset_total_return[self._objective]
+        portfolio_total_return = portfolio_asset_total_return[
+            self.portfolio_params.objective
+        ]
 
         # portfolio expected return and sd
         portfolio_expected_return = expected_return_np.dot(w)
@@ -158,7 +168,7 @@ class Portfolio:
 
         # portfolio
         portfolio_mean_sd = pd.DataFrame(
-            index=[self._objective], columns=["mean", "sd"]
+            index=[self.portfolio_params.objective], columns=["mean", "sd"]
         )
         portfolio_mean_sd["mean"] = portfolio_expected_return
         portfolio_mean_sd["sd"] = portfolio_expected_sd
@@ -183,17 +193,3 @@ class Portfolio:
         )
 
         return performance
-
-    def __str__(self):
-
-        p = self.performance.copy()
-        w_str = json.dumps(p["asset_weights_dict"], sort_keys=True, indent=4)
-
-        out_str = ""
-        out_str += f"- asset_weights_dict:\n{w_str}\n\n"
-        out_str += f"- daily_return:\n{p['daily_return']}\n\n"
-        out_str += f"- daily_sd:\n{p['daily_sd']}\n\n"
-        out_str += f"- portfolio_returns:\n{p['portfolio_returns']}\n\n"
-        out_str += f"- portfolio_cum_returns:\n{p['portfolio_cum_returns']}\n\n"
-
-        return out_str
