@@ -1,7 +1,7 @@
 import pytest
 
-from portfawn.portfolio import Portfolio
-from portfawn.portfolio import PlotPortfolio
+from portfawn.portfolio.portfolio import Portfolio
+from portfawn.plot.portfolio import PlotPortfolio
 
 asset_list = ["SPY", "GLD"]
 

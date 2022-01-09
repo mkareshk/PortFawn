@@ -1,10 +1,13 @@
 import logging
+
 import neal
 import numpy as np
 import scipy.optimize as sco
 from dwave.system import DWaveCliqueSampler
 
 from portfawn.models.economic import EconomicModel
+
+logger = logging.getLogger(__name__)
 
 
 class QuantumOptModel:

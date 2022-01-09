@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class EconomicModel:
     def __init__(self, risk_free_rate: float = 0.0, annualized_days: int = 252) -> None:
         self._risk_free_rate = risk_free_rate
