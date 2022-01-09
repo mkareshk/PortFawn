@@ -300,7 +300,7 @@ class Plot:
 
         df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=150, alpha=0.9)
         df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=150, alpha=0.9)
-        df_3.plot.scatter(x="sd", y="mean", c=colours[2], ax=ax, s=5, alpha=0.0)
+        df_3.plot.scatter(x="sd", y="mean", c=colours[2], ax=ax, s=5, alpha=0.2)
 
         for i, point in df_1.iterrows():
             ax.text(
@@ -322,7 +322,7 @@ class Plot:
         ax.set_ylabel(ylabel)
         ax.set_title(title)
 
-        ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
+        # ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
         ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
         fig.tight_layout()
 
