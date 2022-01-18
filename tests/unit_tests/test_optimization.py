@@ -24,8 +24,3 @@ ids = [o.objective for o in optimizers]
 def test_quantum_optimization_neal(optimizer):
 
     w = optimizer.optimize(expected_returns, expected_cov)
-    # import logging
-
-    # logging.error(w)
-    return
-    # assert w.sum() == 1

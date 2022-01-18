@@ -1,6 +1,6 @@
 import pytest
 
-from portfawn.portfolio.portfolio import Portfolio, PortfolioParams
+from portfawn.portfolio.portfolio import MeanVariancePortfolio, PortfolioParams
 from portfawn.plot.portfolio import PlotPortfolio
 from utils import ASSET_LIST, OBJECTIVES
 
@@ -9,7 +9,7 @@ from utils import ASSET_LIST, OBJECTIVES
 def test_portfolio(objective):
 
     portfolio_params = PortfolioParams(name=objective, objective=objective)
-    portfolio = Portfolio(portfolio_params)
+    portfolio = MeanVariancePortfolio(portfolio_params)
     portfolio_result = portfolio.run(asset_list=ASSET_LIST)
 
     plot_portfolio = PlotPortfolio(portfolio_result)
