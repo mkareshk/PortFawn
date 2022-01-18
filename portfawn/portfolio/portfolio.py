@@ -50,7 +50,7 @@ class PortfolioParams:
         self.init_point = init_point
 
 
-class Portfolio:
+class MeanVariancePortfolio:
     def __init__(self, portfolio_params):
 
         # args

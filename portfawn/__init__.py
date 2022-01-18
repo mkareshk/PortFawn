@@ -1,7 +1,7 @@
 import logging
 
 from portfawn.plot import PlotPortfolio, PlotMultiPortfolio
-from portfawn.portfolio import Portfolio, MultiPortfolio
+from portfawn.portfolio import MeanVariancePortfolio, MultiPortfolio
 from portfawn.models import EconomicModel, ClassicOptModel, QuantumOptModel, RiskModel
 
 logging.basicConfig(

@@ -4,7 +4,7 @@ import copy
 import numpy as np
 import pandas as pd
 
-from portfawn.portfolio.portfolio import Portfolio, PortfolioParams
+from portfawn.portfolio.portfolio import MeanVariancePortfolio, PortfolioParams
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class MultiPortfolio:
             param = copy.deepcopy(self.multi_portfolio_params)
             param.objective = objective
 
-            self.portfolios[objective] = Portfolio(param)
+            self.portfolios[objective] = MeanVariancePortfolio(param)
 
     def run(self, asset_list, date_start="2010-01-01", date_end="2021-12-31"):
 
