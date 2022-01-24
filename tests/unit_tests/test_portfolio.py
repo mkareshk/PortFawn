@@ -1,6 +1,6 @@
 import pytest
 
-from portfawn.portfolio.portfolio import MeanVariancePortfolio, PortfolioParams
+from portfawn.portfolio.portfolio import MeanVariancePortfolio
 from portfawn.plot.portfolio import PlotPortfolio
 from utils import ASSET_LIST, OBJECTIVES
 
@@ -8,9 +8,9 @@ from utils import ASSET_LIST, OBJECTIVES
 @pytest.mark.parametrize("objective", OBJECTIVES, ids=OBJECTIVES)
 def test_portfolio(objective):
 
-    portfolio_params = PortfolioParams(name=objective, objective=objective)
-    portfolio = MeanVariancePortfolio(portfolio_params)
-    portfolio_result = portfolio.run(asset_list=ASSET_LIST)
+    portfolio = MeanVariancePortfolio(name=objective, objective=objective)
+    portfolio.fit(asset_list=ASSET_LIST)
+    portfolio_result = portfolio.evaluate()
 
     plot_portfolio = PlotPortfolio(portfolio_result)
 
