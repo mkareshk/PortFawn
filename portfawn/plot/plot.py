@@ -135,17 +135,40 @@ class Plot:
         figsize=DEFAULT_SIZE,
         alpha=1.0,
         legend=True,
+        yscale="linear",
+        asset_list=None,
+        portfolio_list=None,
     ):
         fig, ax = plt.subplots(figsize=figsize)
 
-        df.plot(
-            title=title,
-            xlabel=xlabel,
-            ylabel=ylabel,
-            linewidth=2,
-            alpha=alpha,
-            ax=ax,
-        )
+        if asset_list and portfolio_list:
+            df.loc[:, asset_list].plot(
+                title=title,
+                xlabel=xlabel,
+                ylabel=ylabel,
+                linewidth=2,
+                alpha=alpha,
+                linestyle="dotted",
+                ax=ax,
+            )
+            df.loc[:, portfolio_list].plot(
+                title=title,
+                xlabel=xlabel,
+                ylabel=ylabel,
+                linewidth=3,
+                alpha=alpha,
+                ax=ax,
+            )
+        else:
+            df.plot(
+                title=title,
+                xlabel=xlabel,
+                ylabel=ylabel,
+                linewidth=2,
+                alpha=alpha,
+                ax=ax,
+            )
+
         if legend:
             current_handles, current_labels = plt.gca().get_legend_handles_labels()
             # plt.xticks(rotation=45)
@@ -158,6 +181,8 @@ class Plot:
             )
         else:
             ax.get_legend().remove()
+
+        ax.set_yscale(yscale)
         plt.grid(True)
         fig.tight_layout()
 
@@ -343,5 +368,11 @@ class Plot:
         ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
         ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
         fig.tight_layout()
+
+        return fig, ax
+
+    def plot_pie(self, data_dict, title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE):
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.pie(data_dict.values(), labels=data_dict.keys())
 
         return fig, ax

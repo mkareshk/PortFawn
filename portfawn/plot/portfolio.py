@@ -1,4 +1,5 @@
 import logging
+from matplotlib.pyplot import yscale
 
 import numpy as np
 import pandas as pd
@@ -11,15 +12,27 @@ logger = logging.getLogger(__name__)
 class PlotPortfolio:
     def __init__(self, performance) -> None:
         self.performance = performance
+        self.asset_list = list(self.performance["asset_weights"].keys())
+        self.portfolio_list = list(performance["portfolio_returns"].columns)
         self.plot = Plot()
 
-    def plot_returns(self):
+    def plot_pie(self):
+
+        fig, ax = self.plot.plot_pie(
+            data_dict=self.performance["asset_weights"],
+        )
+        return fig, ax
+
+    def plot_returns(self, resample):
+
         fig, ax = self.plot.plot_trend(
-            df=self.performance["portfolio_returns"],
+            df=self.performance["portfolio_assets_returns"].resample(resample).mean(),
             title=f"",
             xlabel="Date",
-            ylabel="Returns",
-            legend=False,
+            ylabel="Average Daily Returns",
+            legend=True,
+            asset_list=self.asset_list,
+            portfolio_list=self.portfolio_list,
         )
         return fig, ax
 
@@ -28,7 +41,9 @@ class PlotPortfolio:
             df=self.performance["portfolio_assets_cum_returns"],
             title="",
             xlabel="Date",
-            ylabel="Returns",
+            ylabel="Cumulative Returns",
+            asset_list=self.asset_list,
+            portfolio_list=self.portfolio_list,
         )
         return fig, ax
 
@@ -94,7 +109,7 @@ class PlotPortfolio:
         return fig, ax
 
     def random_portfolio(self, asset_returns):
-        n = 100000
+        n = 1000
         returns_np = asset_returns.to_numpy()
         cov = asset_returns.cov().to_numpy()
         r_list = []
