@@ -94,7 +94,7 @@ class PlotPortfolio:
         return fig, ax
 
     def random_portfolio(self, asset_returns):
-        n = 1000
+        n = 100000
         returns_np = asset_returns.to_numpy()
         cov = asset_returns.cov().to_numpy()
         r_list = []

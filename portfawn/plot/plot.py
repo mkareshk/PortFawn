@@ -284,12 +284,7 @@ class Plot:
         y = conc.values[:, 0]
         hull = ConvexHull(conc.values)
 
-        vertices = [
-            v
-            for v in np.hstack([hull.vertices, hull.vertices[0]])[
-                2 * len(df_1.columns) :
-            ]
-        ]
+        vertices = [v for v in np.hstack([hull.vertices, hull.vertices[0]])]
 
         plt.plot(x[vertices], y[vertices], "k--", linewidth=2, alpha=0.4)
 
