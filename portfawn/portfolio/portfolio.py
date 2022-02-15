@@ -31,6 +31,10 @@ class MeanVariancePortfolio:
     ):
 
         # args
+
+        if not name:
+            name = objective
+
         self.name = name
         self.objective = objective
         self.risk_type = risk_type
@@ -108,7 +112,6 @@ class MeanVariancePortfolio:
             date_start=date_start,
             date_end=date_end,
         )
-
         self.asset_returns = self.returns_data.returns
 
         # risk evaluation
@@ -133,7 +136,7 @@ class MeanVariancePortfolio:
             date_start=date_start,
             date_end=date_end,
         )
-        asset_returns = self.returns_data.returns
+        asset_returns = returns_data.returns
         asset_cum_returns = returns_data.cum_returns
 
         # risk evaluation
@@ -158,9 +161,8 @@ class MeanVariancePortfolio:
         )
 
         # total returns
-
         portfolio_asset_total_return = portfolio_assets_cum_returns.iloc[-1, :]
-        portfolio_total_return = portfolio_asset_total_return[self.objective]
+        portfolio_total_return = portfolio_cum_returns.iloc[-1, :]
 
         # portfolio expected return and sd
         portfolio_expected_return = expected_return_np.dot(self._w)
@@ -176,6 +178,8 @@ class MeanVariancePortfolio:
         portfolio_mean_sd["mean"] = portfolio_expected_return
         portfolio_mean_sd["sd"] = portfolio_expected_sd
 
+        # asset-portoflio
+        portfolio_asset_mean_sd = pd.concat([market_mean_sd, portfolio_mean_sd], axis=0)
         performance = {}
         performance.update(
             {
@@ -191,6 +195,7 @@ class MeanVariancePortfolio:
                 "portfolio_expected_sd": portfolio_expected_sd,
                 "market_mean_sd": market_mean_sd,
                 "portfolio_mean_sd": portfolio_mean_sd,
+                "portfolio_asset_mean_sd": portfolio_asset_mean_sd,
                 "portfolio_config": self.portfolio_config,
             }
         )
