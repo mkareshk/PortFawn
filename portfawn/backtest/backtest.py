@@ -71,50 +71,17 @@ class BackTest:
                 delayed(self.run_iter)(**instance) for instance in backtesting_instances
             )
 
-        # create profiles
-        data_list = []
+        # performance
 
-        for performance in performance_backtesting:
-            d = {
-                "portfolio_total_return": performance["portfolio_total_return"].values[
-                    0
-                ],
-                "portfolio_asset_total_return": performance[
-                    "portfolio_asset_total_return"
-                ].to_dict(),
-                "portfolio_asset_mean_sd": performance[
-                    "portfolio_asset_mean_sd"
-                ].to_dict(),
-                "portfolio_mean_sd": performance["portfolio_mean_sd"],
-                "asset_weights": performance["asset_weights"],
-                "fitting_time": performance["fitting_time"],
-                "evaluation_time": performance["evaluation_time"],
-                "date": performance["date"],
-            }
+        # returns
+        total_returns_list = [p["total_returns"] for p in performance_backtesting]
+        rolling_total_returns = pd.concat(total_returns_list, axis=1).T
+        self.returns = rolling_total_returns.groupby(
+            by=rolling_total_returns.index
+        ).max()
 
-            d.update(performance["portfolio_config"])
-            data_list.append(d)
-
-        profile_df = pd.DataFrame(data_list)
-
-        portfolio_df = profile_df.set_index("date", inplace=False)
-        portfolio_returns_df = pd.DataFrame()
-
-        for portfolio_name in portfolio_df["name"].unique():
-            temp = portfolio_df.loc[portfolio_df["name"] == portfolio_name, :]
-            portfolio_returns_df[portfolio_name] = temp["portfolio_total_return"]
-
-        portfolio_cum_returns_df = (portfolio_returns_df + 1).cumprod() - 1
-
-        self.profile_backtesting = performance_backtesting
-        self.profile_df = profile_df
-        self.portfolio_returns_df = portfolio_returns_df
-        self.portfolio_cum_returns_df = portfolio_cum_returns_df
-        self.asset_weights_df = pd.DataFrame(
-            [item for ind, item in profile_df["asset_weights"].items()],
-            index=profile_df["date"],
-        )
-        self.mean_sd = pd.concat([i for i in profile_df["portfolio_mean_sd"]])
+        # cumulative returns
+        self.cum_returns = (self.returns + 1).cumprod() - 1
 
     def run_iter(
         self,
@@ -165,10 +132,84 @@ class BackTest:
 
     def plot_returns(self):
         fig, ax = self.plot.plot_trend(
-            df=self.portfolio_cum_returns_df,
-            title=f"",
+            df=self.returns,
+            title="",
             xlabel="Date",
             ylabel="Returns",
-            legend=False,
         )
         return fig, ax
+
+    def plot_cum_returns(self):
+        fig, ax = self.plot.plot_trend(
+            df=self.cum_returns,
+            title="",
+            xlabel="Date",
+            ylabel="Returns",
+        )
+        return fig, ax
+
+    def plot_dist_returns(self):
+
+        fig, ax = self.plot.plot_box(
+            df=self.returns,
+            title="",
+            xlabel="Portfolio Fitness",
+            ylabel="Daily Returns (%)",
+        )
+        return fig, ax
+
+    def plot_corr(self):
+        fig, ax = self.plot.plot_heatmap(
+            df=self.returns,
+            relation_type="corr",
+            title="",
+            annotate=True,
+        )
+        return fig, ax
+
+    def plot_cov(self):
+        fig, ax = self.plot.plot_heatmap(
+            df=self.returns,
+            relation_type="cov",
+            title="",
+            annotate=True,
+        )
+        return fig, ax
+
+    # def plot_asset_weights(self):
+    #     fig, ax = self.plot.plot_trend(
+    #         df=self.asset_weights_df,
+    #         title="",
+    #         xlabel="Date",
+    #         ylabel="Returns",
+    #     )
+    #     return fig, ax
+
+    # def plot_asset_weights_dist(self):
+    #     fig, ax = self.plot.plot_box(
+    #         df=self.asset_weights_df,
+    #         title="",
+    #         xlabel="Date",
+    #         ylabel="Cumulative Returns",
+    #         yscale="symlog",
+    #     )
+    #     return fig, ax
+
+    # def plot_mean_sd(self, annualized=True):
+
+    #     mean_sd = self.mean_sd.copy()
+
+    #     if annualized:
+    #         mean_sd["mean"] *= self.annualized_days
+    #         mean_sd["sd"] *= np.sqrt(self.annualized_days)
+
+    #     fig, ax = self.plot.plot_scatter_seaborn(
+    #         data=mean_sd,
+    #         y="mean",
+    #         x="sd",
+    #         hue=mean_sd.index,
+    #         title="",
+    #         xlabel="Volatility (SD)",
+    #         ylabel="Expected Returns",
+    #     )
+    #     return fig, ax
