@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from dafin import Returns
+from dafin import Returns, AssetPerformance
 
 from portfawn.models.risk import RiskModel
 from portfawn.models.optimization import QuantumOptModel, ClassicOptModel
@@ -131,73 +131,27 @@ class MeanVariancePortfolio:
             raise ValueError
 
         # returns data
-        returns_data = Returns(
+        asset_returns = Returns(
             asset_list=self.asset_list,
             date_start=date_start,
             date_end=date_end,
-        )
-        asset_returns = returns_data.returns
-        asset_cum_returns = returns_data.cum_returns
+        ).returns
 
-        # risk evaluation
-        expected_return, expected_cov = self._risk_model.evaluate(self.returns_data)
-        expected_return_np = expected_return.to_numpy()
-        expected_cov_np = expected_cov.to_numpy()
-
-        ## performance metrics
-
-        # portfolio daily returns
+        ## performance
         portfolio_returns = pd.DataFrame(
             asset_returns.to_numpy().dot(self._w),
             index=asset_returns.index,
             columns=[self.objective],
         )
         portfolio_assets_returns = pd.concat([asset_returns, portfolio_returns], axis=1)
+        performance = AssetPerformance(portfolio_assets_returns)
 
-        # portfolio cummulative return
-        portfolio_cum_returns = (portfolio_returns + 1).cumprod() - 1
-        portfolio_assets_cum_returns = pd.concat(
-            [asset_cum_returns, portfolio_cum_returns], axis=1
-        )
-
-        # total returns
-        portfolio_asset_total_return = portfolio_assets_cum_returns.iloc[-1, :]
-        portfolio_total_return = portfolio_cum_returns.iloc[-1, :]
-
-        # portfolio expected return and sd
-        portfolio_expected_return = expected_return_np.dot(self._w)
-        portfolio_expected_sd = np.sqrt(self._w.T.dot(expected_cov_np).dot(self._w))
-
-        # market
-        market_mean_sd = pd.DataFrame(columns=["mean", "sd"])
-        market_mean_sd["mean"] = returns_data.returns.mean()
-        market_mean_sd["sd"] = returns_data.returns.std()
-
-        # portfolio
-        portfolio_mean_sd = pd.DataFrame(index=[self.objective], columns=["mean", "sd"])
-        portfolio_mean_sd["mean"] = portfolio_expected_return
-        portfolio_mean_sd["sd"] = portfolio_expected_sd
-
-        # asset-portoflio
-        portfolio_asset_mean_sd = pd.concat([market_mean_sd, portfolio_mean_sd], axis=0)
-        performance = {}
-        performance.update(
-            {
-                "asset_weights": self.asset_weights,
-                "asset_returns": asset_returns,
-                "portfolio_returns": portfolio_returns,
-                "portfolio_assets_returns": portfolio_assets_returns,
-                "portfolio_cum_returns": portfolio_cum_returns,
-                "portfolio_assets_cum_returns": portfolio_assets_cum_returns,
-                "portfolio_asset_total_return": portfolio_asset_total_return,
-                "portfolio_total_return": portfolio_total_return,
-                "portfolio_expected_return": portfolio_expected_return,
-                "portfolio_expected_sd": portfolio_expected_sd,
-                "market_mean_sd": market_mean_sd,
-                "portfolio_mean_sd": portfolio_mean_sd,
-                "portfolio_asset_mean_sd": portfolio_asset_mean_sd,
-                "portfolio_config": self.portfolio_config,
-            }
-        )
-
-        return performance
+        # result
+        return {
+            "asset_weights": self.asset_weights,
+            "returns": performance.returns,
+            "cum_returns": performance.cum_returns,
+            "total_returns": performance.total_returns,
+            "mean_sd": performance.mean_sd,
+            "portfolio_config": self.portfolio_config,
+        }
