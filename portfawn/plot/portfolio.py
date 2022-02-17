@@ -13,7 +13,9 @@ class PlotPortfolio:
     def __init__(self, performance) -> None:
         self.performance = performance
         self.asset_list = list(self.performance["asset_weights"].keys())
-        self.portfolio_list = list(performance["portfolio_returns"].columns)
+        self.portfolio_list = list(
+            set(performance["returns"].columns) - set(self.asset_list)
+        )
         self.plot = Plot()
 
     def plot_pie(self):
@@ -26,7 +28,7 @@ class PlotPortfolio:
     def plot_returns(self, resample):
 
         fig, ax = self.plot.plot_trend(
-            df=self.performance["portfolio_assets_returns"].resample(resample).mean(),
+            df=self.performance["returns"].resample(resample).mean(),
             title=f"",
             xlabel="Date",
             ylabel="Average Daily Returns",
@@ -38,7 +40,7 @@ class PlotPortfolio:
 
     def plot_cum_returns(self):
         fig, ax = self.plot.plot_trend(
-            df=self.performance["portfolio_assets_cum_returns"],
+            df=self.performance["cum_returns"],
             title="",
             xlabel="Date",
             ylabel="Cumulative Returns",
@@ -49,7 +51,7 @@ class PlotPortfolio:
 
     def plot_dist_returns(self):
         fig, ax = self.plot.plot_box(
-            df=self.performance["portfolio_assets_returns"],
+            df=self.performance["returns"],
             title="",
             xlabel="Portfolio Fitness",
             ylabel="Daily Returns",
@@ -60,7 +62,7 @@ class PlotPortfolio:
     def plot_corr(self):
 
         fig, ax = self.plot.plot_heatmap(
-            df=self.performance["portfolio_assets_returns"],
+            df=self.performance["returns"],
             relation_type="corr",
             title="",
             annotate=True,
@@ -69,7 +71,7 @@ class PlotPortfolio:
 
     def plot_cov(self):
         fig, ax = self.plot.plot_heatmap(
-            df=self.performance["portfolio_assets_returns"],
+            df=self.performance["returns"],
             relation_type="cov",
             title="",
             annotate=True,
@@ -82,10 +84,11 @@ class PlotPortfolio:
         fig=None,
         ax=None,
     ):
-
-        market_mean_sd = self.performance["market_mean_sd"].copy()
-        portfolio_mean_sd = self.performance["portfolio_mean_sd"].copy()
-        random_mean_sd = self.random_portfolio(self.performance["asset_returns"])
+        market_mean_sd = self.performance["mean_sd"].loc[self.asset_list, :]
+        portfolio_mean_sd = self.performance["mean_sd"].loc[self.portfolio_list, :]
+        random_mean_sd = self.random_portfolio(
+            self.performance["returns"].loc[:, self.portfolio_list]
+        )
 
         annualized_days = self.performance["portfolio_config"]["annualized_days"]
 
