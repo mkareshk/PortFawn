@@ -147,14 +147,14 @@ class Plot:
                 xlabel=xlabel,
                 ylabel=ylabel,
                 linewidth=2,
-                alpha=0.7 * alpha,
+                alpha=0.5 * alpha,
                 ax=ax,
             )
             df.loc[:, portfolio_list].plot(
                 title=title,
                 xlabel=xlabel,
                 ylabel=ylabel,
-                linewidth=4,
+                linewidth=5,
                 alpha=alpha,
                 ax=ax,
             )

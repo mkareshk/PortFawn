@@ -121,20 +121,19 @@ class MultiPortfolio:
         annualized_days = portfolio_results_list[0]["portfolio_config"][
             "annualized_days"
         ]
-        mean_sd_list = [r["portfolio_mean_sd"] for r in portfolio_results_list]
+        mean_sd_list = [r["mean_sd"] for r in portfolio_results_list]
 
-        portfolio_mean_sd = pd.concat(mean_sd_list, axis=0)
-        portfolio_mean_sd["mean"] *= annualized_days
-        portfolio_mean_sd["sd"] *= np.sqrt(annualized_days)
-
-        market_mean_sd = portfolio_results_list[0]["market_mean_sd"]
-        market_mean_sd["mean"] *= annualized_days
-        market_mean_sd["sd"] *= np.sqrt(annualized_days)
+        mean_sd = pd.concat(mean_sd_list, axis=0)
+        mean_sd["mean"] *= annualized_days
+        mean_sd["sd"] *= np.sqrt(annualized_days)
+        portfolio_mean_sd = mean_sd.loc[self.objectives_list, :]
+        market_mean_sd = mean_sd.loc[asset_list, :]
 
         # random portfolios
         n = 1000
-        returns_np = portfolio_results_list[0]["asset_returns"].to_numpy()
-        cov = portfolio_results_list[0]["asset_returns"].cov().to_numpy()
+        returns_df = portfolio_results_list[0]["returns"].loc[:, asset_list]
+        returns_np = returns_df.to_numpy()
+        cov = returns_df.cov().to_numpy()
 
         r_list = []
         for i in range(n):

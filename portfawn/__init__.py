@@ -9,7 +9,7 @@ from portfawn.backtest import BackTest
 logging.basicConfig(
     format="[%(levelname)s] [%(asctime)s] (%(name)s): %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S",
-    level=logging.INFO,
+    level=logging.WARNING,
 )
 
 logger = logging.getLogger(__name__)

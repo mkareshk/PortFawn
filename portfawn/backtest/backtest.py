@@ -136,6 +136,8 @@ class BackTest:
             title="",
             xlabel="Date",
             ylabel="Returns",
+            asset_list=self.asset_list,
+            portfolio_list=[p.objective for p in self.portfolio_list],
         )
         return fig, ax
 
@@ -145,6 +147,8 @@ class BackTest:
             title="",
             xlabel="Date",
             ylabel="Returns",
+            asset_list=self.asset_list,
+            portfolio_list=[p.objective for p in self.portfolio_list],
         )
         return fig, ax
 
