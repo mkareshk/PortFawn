@@ -1,6 +1,6 @@
 from portfawn.portfolio.multi_portfolio import MultiPortfolio
 from portfawn.plot.multi_portfolio import PlotMultiPortfolio
-from utils import ASSET_LIST, OBJECTIVES
+from ..utils import ASSET_LIST, OBJECTIVES, check_figure
 
 
 def test_multi_portfolio():
@@ -10,4 +10,4 @@ def test_multi_portfolio():
 
     plot_multi_portfolio = PlotMultiPortfolio(result)
     fig, ax = plot_multi_portfolio.plot_mean_sd()
-    fig.savefig("plots/multi.png")
+    check_figure(fig, ax)

@@ -1,8 +1,7 @@
 import pytest
 
-from portfawn.portfolio.portfolio import MeanVariancePortfolio
-from portfawn.plot.portfolio import PlotPortfolio
-from utils import ASSET_LIST, OBJECTIVES
+from portfawn import MeanVariancePortfolio, PlotPortfolio
+from ..utils import ASSET_LIST, OBJECTIVES, check_figure
 
 
 @pytest.mark.parametrize("objective", OBJECTIVES, ids=OBJECTIVES)
@@ -15,19 +14,19 @@ def test_portfolio(objective):
     plot_portfolio = PlotPortfolio(portfolio_result)
 
     fig, ax = plot_portfolio.plot_returns()
-    fig.savefig("plots/portoflio_returns.png")
+    check_figure(fig, ax)
 
     fig, ax = plot_portfolio.plot_cum_returns()
-    fig.savefig("plots/portoflio_cum_returns.png")
+    check_figure(fig, ax)
 
     fig, ax = plot_portfolio.plot_corr()
-    fig.savefig("plots/portoflio_corr.png")
+    check_figure(fig, ax)
 
     fig, ax = plot_portfolio.plot_cov()
-    fig.savefig("plots/portoflio_cov.png")
+    check_figure(fig, ax)
 
     fig, ax = plot_portfolio.plot_dist_returns()
-    fig.savefig("plots/portoflio_dist_returns.png")
+    check_figure(fig, ax)
 
     fig, ax = plot_portfolio.plot_mean_sd()
-    fig.savefig("plots/portoflio_mean_sd.png")
+    check_figure(fig, ax)
