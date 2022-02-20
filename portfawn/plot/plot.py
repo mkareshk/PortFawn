@@ -6,12 +6,16 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 import seaborn as sns
 from scipy.spatial import ConvexHull
+from matplotlib.ticker import FormatStrFormatter
 
 sns.set()
 sns.set_style("whitegrid")
 
 # general configuration for matplotlib
 DEFAULT_SIZE = (15, 8)
+DEFAULT_SIZE_SQUARE = (15, 15)
+
+
 params = {
     "font.family": "serif",
     "legend.fontsize": "large",
@@ -209,13 +213,16 @@ class Plot:
         title="",
         xlabel="",
         ylabel="",
-        figsize=DEFAULT_SIZE,
+        figsize=DEFAULT_SIZE_SQUARE,
         colour="tab:blue",
         fig=None,
         ax=None,
     ):
         if not ax:
             fig, ax = plt.subplots(figsize=figsize)
+
+        ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+        ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
 
         df.plot.scatter(x="sd", y="mean", c=colour, ax=ax, s=200, alpha=1.0)
 
@@ -240,53 +247,52 @@ class Plot:
         ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
         ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
         fig.tight_layout()
-
         return fig, ax
 
-    def plot_scatter_portfolio(
-        self,
-        df_1,
-        df_2,
-        title="",
-        xlabel="",
-        ylabel="",
-        figsize=DEFAULT_SIZE,
-        colours=["tab:blue", "tab:red"],
-    ):
-        fig, ax = plt.subplots(figsize=figsize)
+    # def plot_scatter_portfolio(
+    #     self,
+    #     df_1,
+    #     df_2,
+    #     title="",
+    #     xlabel="",
+    #     ylabel="",
+    #     figsize=DEFAULT_SIZE,
+    #     colours=["tab:blue", "tab:red"],
+    # ):
+    #     fig, ax = plt.subplots(figsize=figsize)
 
-        df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=200, alpha=1.0)
-        df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=200, alpha=1.0)
+    #     df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=200, alpha=1.0)
+    #     df_2.plot.scatter(x="sd", y="mean", c=colours[1], ax=ax, s=200, alpha=1.0)
 
-        x_min, x_max = df_1["sd"].min(), df_1["sd"].max()
-        x_diff = x_max - x_min
-        y_min, y_max = df_1["mean"].min(), df_1["mean"].max()
-        y_diff = y_max - y_min
+    #     x_min, x_max = df_1["sd"].min(), df_1["sd"].max()
+    #     x_diff = x_max - x_min
+    #     y_min, y_max = df_1["mean"].min(), df_1["mean"].max()
+    #     y_diff = y_max - y_min
 
-        for i, point in df_1.iterrows():
-            ax.text(
-                point["sd"] - x_diff * 0.03,
-                point["mean"] + y_diff * 0.03,
-                i,
-                fontsize=14,
-            )
-        for i, point in df_2.iterrows():
-            ax.text(
-                point["sd"] - x_diff * 0.03,
-                point["mean"] + y_diff * 0.03,
-                i,
-                fontsize=14,
-            )
-        plt.grid(True, axis="y")
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_title(title)
+    #     for i, point in df_1.iterrows():
+    #         ax.text(
+    #             point["sd"] - x_diff * 0.03,
+    #             point["mean"] + y_diff * 0.03,
+    #             i,
+    #             fontsize=14,
+    #         )
+    #     for i, point in df_2.iterrows():
+    #         ax.text(
+    #             point["sd"] - x_diff * 0.03,
+    #             point["mean"] + y_diff * 0.03,
+    #             i,
+    #             fontsize=14,
+    #         )
+    #     plt.grid(True, axis="y")
+    #     ax.set_xlabel(xlabel)
+    #     ax.set_ylabel(ylabel)
+    #     ax.set_title(title)
 
-        ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
-        ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
-        fig.tight_layout()
+    #     ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
+    #     ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
+    #     fig.tight_layout()
 
-        return fig, ax
+    #     return fig, ax
 
     def plot_scatter_portfolio_random(
         self,
@@ -296,10 +302,13 @@ class Plot:
         title="",
         xlabel="",
         ylabel="",
-        figsize=DEFAULT_SIZE,
+        figsize=DEFAULT_SIZE_SQUARE,
         colours=["tab:blue", "tab:red", "tab:green"],
     ):
         fig, ax = plt.subplots(figsize=figsize)
+
+        ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+        ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
 
         conc = pd.concat([df_1, df_2, df_3], axis=0).dropna()
 
@@ -311,9 +320,9 @@ class Plot:
 
         plt.plot(x[vertices], y[vertices], "k--", linewidth=2, alpha=0.4)
 
-        x_min, x_max = df_1["sd"].min(), df_1["sd"].max()
+        x_min, x_max = conc["sd"].min(), conc["sd"].max()
         x_diff = x_max - x_min
-        y_min, y_max = df_1["mean"].min(), df_1["mean"].max()
+        y_min, y_max = conc["mean"].min(), conc["mean"].max()
         y_diff = y_max - y_min
 
         df_1.plot.scatter(x="sd", y="mean", c=colours[0], ax=ax, s=150, alpha=0.9)
@@ -340,33 +349,39 @@ class Plot:
         ax.set_ylabel(ylabel)
         ax.set_title(title)
 
-        ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
+        axis_max = max(x_max + 0.2 * x_diff, y_max + 0.2 * y_diff)
+        x_min = 0.0
+        y_min = min(0.0, y_min - 0.2 * y_diff)
+
+        ax.set_xlim(left=x_min, right=axis_max)
+        ax.set_ylim(bottom=y_min, top=axis_max)
+
         fig.tight_layout()
 
         return fig, ax
 
-    def plot_scatter_seaborn(
-        self, data, x, y, hue, title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE
-    ):
+    # def plot_scatter_seaborn(
+    #     self, data, x, y, hue, title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE
+    # ):
 
-        fig, ax = plt.subplots(figsize=figsize)
-        sns.scatterplot(data=data, x=x, y=y, hue=hue, ax=ax, s=200, alpha=0.5)
+    #     fig, ax = plt.subplots(figsize=figsize)
+    #     sns.scatterplot(data=data, x=x, y=y, hue=hue, ax=ax, s=200, alpha=0.5)
 
-        x_min, x_max = data["sd"].min(), data["sd"].max()
-        x_diff = x_max - x_min
-        y_min, y_max = data["mean"].min(), data["mean"].max()
-        y_diff = y_max - y_min
+    #     x_min, x_max = data["sd"].min(), data["sd"].max()
+    #     x_diff = x_max - x_min
+    #     y_min, y_max = data["mean"].min(), data["mean"].max()
+    #     y_diff = y_max - y_min
 
-        plt.grid(True, axis="y")
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_title(title)
+    #     plt.grid(True, axis="y")
+    #     ax.set_xlabel(xlabel)
+    #     ax.set_ylabel(ylabel)
+    #     ax.set_title(title)
 
-        ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
-        ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
-        fig.tight_layout()
+    #     ax.set_xlim(left=x_min - 0.2 * x_diff, right=x_max + 0.2 * x_diff)
+    #     ax.set_ylim(bottom=y_min - 0.2 * y_diff, top=y_max + 0.2 * y_diff)
+    #     fig.tight_layout()
 
-        return fig, ax
+    #     return fig, ax
 
     def plot_pie(self, data_dict, title="", xlabel="", ylabel="", figsize=DEFAULT_SIZE):
         fig, ax = plt.subplots(figsize=figsize)

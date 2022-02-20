@@ -153,5 +153,7 @@ class MeanVariancePortfolio:
             "cum_returns": performance.cum_returns,
             "total_returns": performance.total_returns,
             "mean_sd": performance.mean_sd,
+            "annualized_mean_sd": performance.annualized_mean_sd,
+            "days_per_year": performance.days_per_year,
             "portfolio_config": self.portfolio_config,
         }

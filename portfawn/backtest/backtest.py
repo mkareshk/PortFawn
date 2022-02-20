@@ -107,7 +107,7 @@ class BackTest:
             f" to {date_end_training} in {fitting_time} seconds"
         )
 
-        # testing
+        # evaluation
         t0 = time.time()
 
         performance = portfolio.evaluate(
@@ -179,41 +179,3 @@ class BackTest:
             annotate=True,
         )
         return fig, ax
-
-    # def plot_asset_weights(self):
-    #     fig, ax = self.plot.plot_trend(
-    #         df=self.asset_weights_df,
-    #         title="",
-    #         xlabel="Date",
-    #         ylabel="Returns",
-    #     )
-    #     return fig, ax
-
-    # def plot_asset_weights_dist(self):
-    #     fig, ax = self.plot.plot_box(
-    #         df=self.asset_weights_df,
-    #         title="",
-    #         xlabel="Date",
-    #         ylabel="Cumulative Returns",
-    #         yscale="symlog",
-    #     )
-    #     return fig, ax
-
-    # def plot_mean_sd(self, annualized=True):
-
-    #     mean_sd = self.mean_sd.copy()
-
-    #     if annualized:
-    #         mean_sd["mean"] *= self.annualized_days
-    #         mean_sd["sd"] *= np.sqrt(self.annualized_days)
-
-    #     fig, ax = self.plot.plot_scatter_seaborn(
-    #         data=mean_sd,
-    #         y="mean",
-    #         x="sd",
-    #         hue=mean_sd.index,
-    #         title="",
-    #         xlabel="Volatility (SD)",
-    #         ylabel="Expected Returns",
-    #     )
-    #     return fig, ax

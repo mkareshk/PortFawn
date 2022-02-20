@@ -15,8 +15,8 @@ class PlotMultiPortfolio:
             df_1=self.performance["market_mean_sd"],
             df_2=self.performance["portfolio_mean_sd"],
             df_3=self.performance["mean_sd_random"],
-            title="Expected Returns vs. Volatility",
-            xlabel="Volatility (SD)",
-            ylabel="Expected Returns",
+            title="",
+            xlabel="Annualized Standard Deviation (%)",
+            ylabel="Annualized Expected Returns (%)",
         )
         return fig, ax

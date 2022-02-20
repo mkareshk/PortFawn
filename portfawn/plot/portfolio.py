@@ -1,8 +1,6 @@
 import logging
-from matplotlib.pyplot import yscale
 
-import numpy as np
-import pandas as pd
+from portfawn.portfolio.utils import random_portfolio
 
 from portfawn.plot import Plot
 
@@ -31,7 +29,7 @@ class PlotPortfolio:
             df=self.performance["returns"].resample(resample).mean(),
             title=f"",
             xlabel="Date",
-            ylabel="Average Daily Returns",
+            ylabel="Daily Returns",
             legend=True,
             asset_list=self.asset_list,
             portfolio_list=self.portfolio_list,
@@ -84,42 +82,31 @@ class PlotPortfolio:
         fig=None,
         ax=None,
     ):
-        market_mean_sd = self.performance["mean_sd"].loc[self.asset_list, :]
-        portfolio_mean_sd = self.performance["mean_sd"].loc[self.portfolio_list, :]
-        random_mean_sd = self.random_portfolio(
-            self.performance["returns"].loc[:, self.portfolio_list]
-        )
-
-        annualized_days = self.performance["portfolio_config"]["annualized_days"]
 
         if annualized:
-            market_mean_sd["mean"] *= annualized_days
-            market_mean_sd["sd"] *= np.sqrt(annualized_days)
-            portfolio_mean_sd["mean"] *= annualized_days
-            portfolio_mean_sd["sd"] *= np.sqrt(annualized_days)
-            random_mean_sd["mean"] *= annualized_days
-            random_mean_sd["sd"] *= np.sqrt(annualized_days)
+            mv = self.performance["annualized_mean_sd"]
+            xlabel = "Annualized Standard Deviation (%)"
+            ylabel = "Annualized Expected Returns (%)"
+        else:
+            mv = self.performance["mean_sd"]
+            xlabel = "Standard Deviation"
+            ylabel = "Expected Returns"
+
+        market_mean_sd = mv.loc[self.asset_list, :]
+        portfolio_mean_sd = mv.loc[self.portfolio_list, :]
+        random_mean_sd = random_portfolio(
+            returns=self.performance["returns"].loc[:, self.asset_list],
+            days_per_year=self.performance["days_per_year"],
+            annualized=annualized,
+        )
 
         fig, ax = self.plot.plot_scatter_portfolio_random(
             df_1=market_mean_sd,
             df_2=portfolio_mean_sd,
             df_3=random_mean_sd,
             title="",
-            xlabel="Volatility (SD)",
-            ylabel="Expected Returns",
+            xlabel=xlabel,
+            ylabel=ylabel,
         )
 
         return fig, ax
-
-    def random_portfolio(self, asset_returns):
-        n = 1000
-        returns_np = asset_returns.to_numpy()
-        cov = asset_returns.cov().to_numpy()
-        r_list = []
-        for i in range(n):
-            w_rand = np.random.random((1, cov.shape[0]))
-            w_rand = w_rand / w_rand.sum()
-            r = returns_np.dot(w_rand.T).mean()
-            c = np.sqrt(w_rand.dot(cov).dot(w_rand.T))[0][0]
-            r_list.append({"mean": r, "sd": c})
-        return pd.DataFrame(r_list)
