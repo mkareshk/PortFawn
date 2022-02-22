@@ -1,7 +1,7 @@
 import pytest
 
 from portfawn import MeanVariancePortfolio, PlotPortfolio
-from ..utils import ASSET_LIST, OBJECTIVES, check_figure
+from tests.utils import ASSET_LIST, OBJECTIVES, check_figure
 
 
 @pytest.mark.parametrize("objective", OBJECTIVES, ids=OBJECTIVES)

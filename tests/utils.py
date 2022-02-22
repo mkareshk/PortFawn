@@ -1,10 +1,9 @@
 import matplotlib
 
-asset_list = ["SPY", "GLD"]
-
-quantum_objectives = ["BMOP"]
-classic_objectives = ["EWP", "MRP", "MVP", "MSRP"]
-OBJECTIVES = quantum_objectives + classic_objectives
+OBJECTIVES_QUANTUM = ["BMOP"]
+OBJECTIVES_CLASSIC = ["MRP", "MVP", "MSRP"]
+OBJECTIVES_MISC = ["EWP"]
+OBJECTIVES = OBJECTIVES_QUANTUM + OBJECTIVES_CLASSIC + OBJECTIVES_MISC
 
 ASSET_LIST = ["SPY", "GLD", "BND"]
 

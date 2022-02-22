@@ -1,6 +1,6 @@
 from portfawn.portfolio.multi_portfolio import MultiPortfolio
 from portfawn.plot.multi_portfolio import PlotMultiPortfolio
-from ..utils import ASSET_LIST, OBJECTIVES, check_figure
+from tests.utils import ASSET_LIST, OBJECTIVES, check_figure
 
 
 def test_multi_portfolio():

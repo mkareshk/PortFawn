@@ -1,6 +1,6 @@
 from portfawn import BackTest
 from portfawn import MeanVariancePortfolio
-from ..utils import (
+from tests.utils import (
     ASSET_LIST,
     OBJECTIVES,
     DATE_START,

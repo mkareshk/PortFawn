@@ -4,7 +4,10 @@ from dafin import Returns
 from portfawn.models.risk import RiskModel
 from portfawn.models.optimization import ClassicOptModel, QuantumOptModel
 
-returns_data = Returns(asset_list=["IUIT", "IBTS"])
+from tests.utils import ASSET_LIST
+
+
+returns_data = Returns(asset_list=ASSET_LIST)
 risk_model = RiskModel()
 expected_returns, expected_cov = risk_model.evaluate(returns_data)
 

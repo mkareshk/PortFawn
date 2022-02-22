@@ -3,7 +3,7 @@ import pandas as pd
 from dafin import Returns
 
 from portfawn.models.risk import RiskModel
-from utils import ASSET_LIST
+from tests.utils import ASSET_LIST
 
 
 returns_data = Returns(asset_list=ASSET_LIST)
