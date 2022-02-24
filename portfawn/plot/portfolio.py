@@ -23,7 +23,7 @@ class PlotPortfolio:
         )
         return fig, ax
 
-    def plot_returns(self, resample="Q"):
+    def plot_returns(self, resample):
 
         fig, ax = self.plot.plot_trend(
             df=self.performance["returns"].resample(resample).mean(),
