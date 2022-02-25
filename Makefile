@@ -11,3 +11,7 @@ test_cov:
 
 uml:
 	pyreverse -o png -p portfawn portfawn 
+
+test_cov_docker:
+	docker build -t portfawn:test -f Dockerfile.test .
+	docker run  portfawn:test
