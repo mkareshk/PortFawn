@@ -20,16 +20,14 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "dimod>=0.10.7",
-        "dwave-neal>=0.5.8",
-        "joblib>=1.1.0",
-        "matplotlib>=3.4.3",
-        "numpy>=1.21.3",
-        "pandas>=1.3.4",
-        "scikit-learn>=1.0.1",
-        "scipy>=1.7.1",
+        "dwave-system>=1.12.0",
+        "dwave-neal>=0.5.9",
+        "scikit-learn>=1.0.2",
         "seaborn>=0.11.2",
-        "yfinance>=0.1.64",
+        "yfinance>=0.1.70",
     ],
     python_requires=">=3.8",
+    extras_require={
+        "test": ["pytest", "pytest-cov"],
+    },
 )
