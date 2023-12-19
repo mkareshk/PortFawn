@@ -20,11 +20,11 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "dwave-system>=1.21.0",
-        "dwave-neal>=0.6.0",
-        "scikit-learn>=1.3.2",
-        "seaborn>=0.13.0",
-        "dafin>=0.0.1"
+        "dwave-system",
+        "dwave-neal",
+        "scikit-learn",
+        "seaborn",
+        "dafin>=0.0.1",
     ],
     python_requires=">=3.10",
     extras_require={
