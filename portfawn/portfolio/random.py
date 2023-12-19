@@ -22,7 +22,7 @@ class RandomPortfolio(PortfolioBase):
     1.0
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str = "random_portfolio") -> None:
         """
         Initializes the RandomPortfolio with the given name.
 

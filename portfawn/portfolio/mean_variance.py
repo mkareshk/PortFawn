@@ -34,9 +34,9 @@ class MeanVariancePortfolio(PortfolioBase):
 
     def __init__(
         self,
-        name: str,
-        risk_model: "RiskModel",
-        optimization_model: "OptimizationModel",
+        name: str = "mean_variance_portfolio",
+        risk_model: "RiskModel" = RiskModel(),
+        optimization_model: "OptimizationModel" = OptimizationModel(objective="MSRP"),
     ) -> None:
         """
         Initializes the MeanVariancePortfolio with the given name, risk model, and optimization model.

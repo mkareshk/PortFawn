@@ -1,6 +1,10 @@
 import imp
 import logging
 
+
+from .models import OptimizationModel, RiskModel
+
+
 from portfawn.plot import PlotPortfolio  # , PlotMultiPortfolio
 from portfawn.portfolio import MeanVariancePortfolio  # , MultiPortfolio
 from portfawn.models import ClassicOptModel, QuantumOptModel, RiskModel

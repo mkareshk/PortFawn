@@ -21,7 +21,7 @@ class EquallyWeightedPortfolio(PortfolioBase):
     {'A': 0.5, 'B': 0.5}
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str = "equally_weighted_portfolio") -> None:
         """
         Initializes the EquallyWeightedPortfolio with the given name.
 
