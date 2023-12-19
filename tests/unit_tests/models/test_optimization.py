@@ -25,5 +25,4 @@ ids = [o.objective for o in optimizers]
 
 @pytest.mark.parametrize("optimizer", optimizers, ids=ids)
 def test_quantum_optimization_neal(optimizer):
-
     w = optimizer.optimize(expected_returns, expected_cov)

@@ -28,7 +28,14 @@ class QuantumOptModel:
         1.0
     """
 
-    def __init__(self, objective, backend: str = "neal", annealing_time: int = 100, num_reads=1000, num_sweeps=10000) -> None:
+    def __init__(
+        self,
+        objective,
+        backend: str = "neal",
+        annealing_time: int = 100,
+        num_reads=1000,
+        num_sweeps=10000,
+    ) -> None:
         # Validating the given objective and backend
         self._validate_inputs(objective, backend)
 
@@ -48,8 +55,7 @@ class QuantumOptModel:
     def _validate_inputs(objective, backend):
         """Validate the objective and backend provided to the constructor."""
         if objective not in ["BMOP"]:
-            raise NotImplementedError(
-                f"Objective '{objective}' not supported.")
+            raise NotImplementedError(f"Objective '{objective}' not supported.")
         if backend not in ["neal", "qpu"]:
             raise NotImplementedError(f"Backend '{backend}' not supported.")
 
@@ -73,7 +79,8 @@ class QuantumOptModel:
         # Create BQM from QUBO and sample
         bqm = dimod.BQM.from_qubo(Q, 0)
         samples = self._sampler.sample(
-            bqm, num_reads=self._num_reads, num_sweeps=self._num_sweeps)
+            bqm, num_reads=self._num_reads, num_sweeps=self._num_sweeps
+        )
 
         # Extract the weights from the sample and normalize
         weight_shape = (len(linear_biases), 1)
@@ -108,17 +115,18 @@ class ClassicOptModel:
         True
     """
 
-    def __init__(self, objective, risk_free_rate=0.0,
-                 scipy_params: dict = {"maxiter": 1000,
-                                       "disp": False, "ftol": 1e-10},
-                 target_return: float = 0.1,
-                 target_sd: float = 0.1,
-                 weight_bound: tuple = (0.0, 1.0),
-                 init_point=None) -> None:
-
+    def __init__(
+        self,
+        objective,
+        risk_free_rate=0.0,
+        scipy_params: dict = {"maxiter": 1000, "disp": False, "ftol": 1e-10},
+        target_return: float = 0.1,
+        target_sd: float = 0.1,
+        weight_bound: tuple = (0.0, 1.0),
+        init_point=None,
+    ) -> None:
         if objective not in ["MRP", "MVP", "MSRP"]:
-            raise NotImplementedError(
-                f"Objective '{objective}' not supported.")
+            raise NotImplementedError(f"Objective '{objective}' not supported.")
 
         self._objective = objective
         self._risk_free_rate = risk_free_rate
@@ -144,24 +152,33 @@ class ClassicOptModel:
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
         if self._objective == "MRP":
-            constraints.append({
-                "type": "ineq",
-                "fun": lambda w: w.T.dot(linear_biases) - self._target_return
-            })
-            def cost_function(w): return -linear_biases.dot(w)
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda w: w.T.dot(linear_biases) - self._target_return,
+                }
+            )
+
+            def cost_function(w):
+                return -linear_biases.dot(w)
 
         elif self._objective == "MVP":
-            constraints.append({
-                "type": "ineq",
-                "fun": lambda w: self._target_sd - linear_biases.dot(w)
-            })
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda w: self._target_sd - linear_biases.dot(w),
+                }
+            )
 
-            def cost_function(w): return np.sqrt(
-                w.T.dot(quadratic_biases).dot(w))
+            def cost_function(w):
+                return np.sqrt(w.T.dot(quadratic_biases).dot(w))
 
         elif self._objective == "MSRP":
-            def cost_function(w): return -(
-                linear_biases.dot(w) - self._risk_free_rate) / np.sqrt(w.T.dot(quadratic_biases).dot(w))
+
+            def cost_function(w):
+                return -(linear_biases.dot(w) - self._risk_free_rate) / np.sqrt(
+                    w.T.dot(quadratic_biases).dot(w)
+                )
 
         else:
             raise NotImplementedError
@@ -169,8 +186,11 @@ class ClassicOptModel:
         asset_num = len(linear_biases)
         weight_bounds = tuple(self._weight_bound for _ in range(asset_num))
 
-        init_point = self._init_point if self._init_point is not None else np.random.random(
-            size=asset_num)
+        init_point = (
+            self._init_point
+            if self._init_point is not None
+            else np.random.random(size=asset_num)
+        )
 
         result = sco.minimize(
             cost_function,
@@ -178,7 +198,7 @@ class ClassicOptModel:
             method="SLSQP",
             bounds=weight_bounds,
             constraints=constraints,
-            options=self._scipy_params
+            options=self._scipy_params,
         )
 
         return result["x"].reshape(asset_num, 1) / np.sum(result["x"])
@@ -186,7 +206,7 @@ class ClassicOptModel:
 
 class OptimizationModel:
     """
-    OptimizationModel class that provides a unified interface for optimization 
+    OptimizationModel class that provides a unified interface for optimization
     using either quantum or classical methods based on the specified objective.
 
     Attributes:
@@ -206,22 +226,24 @@ class OptimizationModel:
         True
     """
 
-    def __init__(self, objective: str,
-                 optimization_params: dict = {
-                     "maxiter": 1000,
-                     "disp": False,
-                     "ftol": 1e-10,
-                     "backend": "neal",
-                     "annealing_time": 100,
-                     "num_reads": 1000,
-                     "num_sweeps": 10000,
-                     "weight_bound": (0.0, 1.0),
-                     "target_return": 0.1,
-                     "target_sd": 0.05,
-                     "init_point": None
-                 },
-                 risk_free_rate: float = 0.0) -> None:
-
+    def __init__(
+        self,
+        objective: str,
+        optimization_params: dict = {
+            "maxiter": 1000,
+            "disp": False,
+            "ftol": 1e-10,
+            "backend": "neal",
+            "annealing_time": 100,
+            "num_reads": 1000,
+            "num_sweeps": 10000,
+            "weight_bound": (0.0, 1.0),
+            "target_return": 0.1,
+            "target_sd": 0.05,
+            "init_point": None,
+        },
+        risk_free_rate: float = 0.0,
+    ) -> None:
         self.objective = objective
         self.optimization_params = optimization_params
         self.risk_free_rate = risk_free_rate
@@ -232,11 +254,13 @@ class OptimizationModel:
                 backend=self.optimization_params["backend"],
                 annealing_time=self.optimization_params["annealing_time"],
                 num_reads=self.optimization_params["num_reads"],
-                num_sweeps=self.optimization_params["num_sweeps"]
+                num_sweeps=self.optimization_params["num_sweeps"],
             )
         elif self.objective in ["MRP", "MVP", "MSRP"]:
             scipy_params = {
-                k: v for k, v in self.optimization_params.items() if k in ["maxiter", "disp", "ftol"]
+                k: v
+                for k, v in self.optimization_params.items()
+                if k in ["maxiter", "disp", "ftol"]
             }
             self.optimizer = ClassicOptModel(
                 objective=self.objective,
@@ -245,11 +269,10 @@ class OptimizationModel:
                 target_return=self.optimization_params["target_return"],
                 target_sd=self.optimization_params["target_sd"],
                 weight_bound=self.optimization_params["weight_bound"],
-                init_point=self.optimization_params["init_point"]
+                init_point=self.optimization_params["init_point"],
             )
         else:
-            raise NotImplementedError(
-                f"Objective '{self.objective}' not supported.")
+            raise NotImplementedError(f"Objective '{self.objective}' not supported.")
 
     def optimize(self, linear_biases: np.array, quadratic_biases: np.array) -> np.array:
         """

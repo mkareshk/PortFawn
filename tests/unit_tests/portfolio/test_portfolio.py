@@ -6,7 +6,6 @@ from tests.utils import ASSET_LIST, OBJECTIVES, check_figure
 
 @pytest.mark.parametrize("objective", OBJECTIVES, ids=OBJECTIVES)
 def test_portfolio(objective):
-
     portfolio = MeanVariancePortfolio(name=objective, objective=objective)
     portfolio.fit(asset_list=ASSET_LIST)
     portfolio_result = portfolio.evaluate()

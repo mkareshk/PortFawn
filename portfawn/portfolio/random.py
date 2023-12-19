@@ -33,7 +33,7 @@ class RandomPortfolio(PortfolioBase):
         """
         super().__init__(name)
 
-    def fit(self, returns_assets: pd.DataFrame) -> 'RandomPortfolio':
+    def fit(self, returns_assets: pd.DataFrame) -> "RandomPortfolio":
         """
         Fits the portfolio by assigning random weights to each asset.
 

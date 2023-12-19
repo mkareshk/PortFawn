@@ -32,10 +32,12 @@ class MeanVariancePortfolio(PortfolioBase):
     {'A': 0.5, 'B': 0.5}
     """
 
-    def __init__(self,
-                 name: str,
-                 risk_model: 'RiskModel',
-                 optimization_model: 'OptimizationModel') -> None:
+    def __init__(
+        self,
+        name: str,
+        risk_model: "RiskModel",
+        optimization_model: "OptimizationModel",
+    ) -> None:
         """
         Initializes the MeanVariancePortfolio with the given name, risk model, and optimization model.
 
@@ -50,7 +52,7 @@ class MeanVariancePortfolio(PortfolioBase):
         """
         super().__init__(name, risk_model, optimization_model)
 
-    def fit(self, returns_assets: ReturnsData) -> 'MeanVariancePortfolio':
+    def fit(self, returns_assets: ReturnsData) -> "MeanVariancePortfolio":
         """
         Fits the portfolio by evaluating the risk and then optimizing using the provided risk and optimization models.
 
@@ -69,12 +71,10 @@ class MeanVariancePortfolio(PortfolioBase):
         self.store_returns_var(returns_assets)
 
         # Evaluate the risk associated with the assets
-        linear_biases, quadratic_biases = self.risk_model.evaluate(
-            returns_assets)
+        linear_biases, quadratic_biases = self.risk_model.evaluate(returns_assets)
 
         # Optimize the asset weights using the provided biases
-        self._w = self.optimization_model.optimize(
-            linear_biases, quadratic_biases)
+        self._w = self.optimization_model.optimize(linear_biases, quadratic_biases)
 
         # Store the asset weights as a dictionary
         self.asset_weights = dict(zip(self.asset_list, self._w))

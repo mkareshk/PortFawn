@@ -24,7 +24,6 @@ def test_risk_model_change_parms():
     "evaluation_type", ["standard", "bootstrapping"], ids=["standard", "bootstrapping"]
 )
 def test_risk_model_standard(evaluation_type):
-
     risk_model = RiskModel(type=evaluation_type)
     expected_returns, expected_cov = risk_model.evaluate(returns_data=returns_data)
 

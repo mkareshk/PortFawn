@@ -1,6 +1,6 @@
 import logging
 
-from portfawn.portfolio.utils import random_portfolio
+from portfawn.portfolio import RandomPortfolio
 
 from portfawn.plot import Plot
 
@@ -17,14 +17,12 @@ class PlotPortfolio:
         self.plot = Plot()
 
     def plot_pie(self):
-
         fig, ax = self.plot.plot_pie(
             data_dict=self.performance["asset_weights"],
         )
         return fig, ax
 
     def plot_returns(self, resample):
-
         fig, ax = self.plot.plot_trend(
             df=self.performance["returns"].resample(resample).mean(),
             title=f"",
@@ -58,7 +56,6 @@ class PlotPortfolio:
         return fig, ax
 
     def plot_corr(self):
-
         fig, ax = self.plot.plot_heatmap(
             df=self.performance["returns"],
             relation_type="corr",
@@ -82,7 +79,6 @@ class PlotPortfolio:
         fig=None,
         ax=None,
     ):
-
         if annualized:
             mv = self.performance["annualized_mean_sd"]
             xlabel = "Annualized Standard Deviation (%)"
@@ -94,7 +90,7 @@ class PlotPortfolio:
 
         market_mean_sd = mv.loc[self.asset_list, :]
         portfolio_mean_sd = mv.loc[self.portfolio_list, :]
-        random_mean_sd = random_portfolio(
+        random_mean_sd = RandomPortfolio(
             returns=self.performance["returns"].loc[:, self.asset_list],
             days_per_year=self.performance["days_per_year"],
             annualized=annualized,

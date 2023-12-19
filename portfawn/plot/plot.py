@@ -30,7 +30,6 @@ pylab.rcParams.update(params)
 
 class Plot:
     def __init__(self):
-
         # log
         self.logger = logging.getLogger(__name__)
 
@@ -86,7 +85,6 @@ class Plot:
     def plot_heatmap(
         self, df, relation_type, title="", annotate=True, figsize=DEFAULT_SIZE
     ):
-
         fig, ax = plt.subplots(figsize=figsize)
 
         if relation_type == "corr":

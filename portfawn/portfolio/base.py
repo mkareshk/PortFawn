@@ -27,10 +27,12 @@ class PortfolioBase:
     True
     """
 
-    def __init__(self,
-                 name: str,
-                 risk_model: 'RiskModel' = None,
-                 optimization_model: 'OptimizationModel' = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        risk_model: "RiskModel" = None,
+        optimization_model: "OptimizationModel" = None,
+    ) -> None:
         """
         Initializes the PortfolioBase with a name, and optionally with a risk and optimization model.
 

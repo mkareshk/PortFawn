@@ -17,7 +17,6 @@ from tests.utils import (
 
 
 def test_backtest():
-
     portfolio_list = []
 
     for obj in OBJECTIVES:

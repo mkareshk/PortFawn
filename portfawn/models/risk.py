@@ -32,11 +32,13 @@ class RiskModel:
     'median'
     """
 
-    def __init__(self,
-                 sampling_type: str = "standard",
-                 sample_num: int = 1000,
-                 sample_size: int = 10,
-                 agg_func: str = "median") -> None:
+    def __init__(
+        self,
+        sampling_type: str = "standard",
+        sample_num: int = 1000,
+        sample_size: int = 10,
+        agg_func: str = "median",
+    ) -> None:
         """
         Initializes the RiskModel with the specified parameters.
 
@@ -57,7 +59,6 @@ class RiskModel:
         self.agg_func = agg_func
 
     def evaluate(self, returns):
-
         if self.sampling_type == "standard":  # simple, but unstable
             return self.standard(returns=returns)
 
@@ -159,12 +160,12 @@ class RiskModel:
         return_df = pd.DataFrame(linear_list)
         linear_biases = getattr(return_df, self.agg_func)()
 
-        risk_matrix = np.array([cov_matrix.to_numpy()
-                               for cov_matrix in quadratic_list])
+        risk_matrix = np.array([cov_matrix.to_numpy() for cov_matrix in quadratic_list])
         risk_aggregator = getattr(np, self.agg_func)
 
         risk_matrix = risk_aggregator(risk_matrix, axis=0)
         quadratic_biases = pd.DataFrame(
-            risk_matrix, index=return_df.columns, columns=return_df.columns)
+            risk_matrix, index=return_df.columns, columns=return_df.columns
+        )
 
         return linear_biases, quadratic_biases
