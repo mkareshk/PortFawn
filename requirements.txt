@@ -1,9 +1,0 @@
-numpy
-scipy
-matplotlib
-seaborn
-pandas
-joblib
-yfinance
-dwave-neal
-sklearn
