@@ -1,6 +1,7 @@
 import time
 import logging
 
+import dafin
 import pandas as pd
 from joblib import Parallel, delayed
 from portfawn.plot import Plot
@@ -45,6 +46,9 @@ class BackTest:
             for i in self.analysis_range
         ]
 
+        # retrieve asset returns
+        self.asset_returns = dafin.ReturnsData(self.asset_list)
+
     def run(self):
 
         backtesting_instances = [
@@ -74,13 +78,15 @@ class BackTest:
         # performance
 
         # returns
-        total_returns_list = [p["total_returns"] for p in performance_backtesting]
+        total_returns_list = [p["returns_total"] for p in performance_backtesting]
+
         rolling_total_returns = pd.concat(total_returns_list, axis=1).T
         self.returns = rolling_total_returns.groupby(
             by=rolling_total_returns.index
         ).max()
-
-        # cumulative returns
+        # # cumulative returns
+        # print(self.returns)
+        # exit()
         self.cum_returns = (self.returns + 1).cumprod() - 1
 
     def run_iter(
@@ -92,16 +98,19 @@ class BackTest:
         date_end_testing,
     ):
 
+        training_returns = self.asset_returns.get_returns(
+            date_start=date_start_training, date_end=date_end_training
+        )
+        evaluation_returns = self.asset_returns.get_returns(
+            date_start=date_start_testing, date_end=date_end_testing
+        )
         # training
         t0 = time.time()
 
-        portfolio.fit(
-            asset_list=self.asset_list,
-            date_start=date_start_training,
-            date_end=date_end_training,
-        )
+        portfolio.fit(training_returns)
 
         fitting_time = time.time() - t0
+
         self.logger.info(
             f"Trained {portfolio.name} portfolio from {date_start_training}"
             f" to {date_end_training} in {fitting_time} seconds"
@@ -109,24 +118,21 @@ class BackTest:
 
         # evaluation
         t0 = time.time()
-
-        performance = portfolio.evaluate(
-            date_start=date_start_testing, date_end=date_end_testing
-        )
-
+        returns_total = portfolio.evaluate(evaluation_returns).returns_total
         evaluation_time = time.time() - t0
+
         self.logger.info(
             f"Tested {portfolio.name} portoflio from {date_start_testing} to {date_end_testing}"
             f" in {evaluation_time} seconds"
         )
 
-        performance.update(
-            {
-                "fitting_time": fitting_time,
-                "evaluation_time": evaluation_time,
-                "date": date_start_testing,
-            }
-        )
+        # portfolio performance
+        performance = {
+            "fitting_time": fitting_time,
+            "evaluation_time": evaluation_time,
+            "date": date_start_testing,
+            "returns_total": returns_total,
+        }
 
         return performance
 
@@ -136,8 +142,8 @@ class BackTest:
             title="",
             xlabel="Date",
             ylabel="Returns",
-            asset_list=self.asset_list,
-            portfolio_list=[p.objective for p in self.portfolio_list],
+            # asset_list=self.asset_list,
+            portfolio_list=[p.name for p in self.portfolio_list],
         )
         return fig, ax
 
@@ -147,8 +153,8 @@ class BackTest:
             title="",
             xlabel="Date",
             ylabel="Returns",
-            asset_list=self.asset_list,
-            portfolio_list=[p.objective for p in self.portfolio_list],
+            # asset_list=self.asset_list,
+            portfolio_list=[p.name for p in self.portfolio_list],
         )
         return fig, ax
 
