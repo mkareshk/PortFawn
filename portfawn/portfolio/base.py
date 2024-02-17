@@ -1,3 +1,4 @@
+import dafin
 import pandas as pd
 
 from ..models import RiskModel, OptimizationModel
@@ -115,7 +116,9 @@ class PortfolioBase:
             columns=[self.name],
         )
 
-        return returns_portfolio
+        performance = dafin.Performance(returns_assets=returns_portfolio)
+
+        return performance
 
     def store_returns_var(self, returns_assets: pd.DataFrame) -> None:
         """

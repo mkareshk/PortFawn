@@ -4,9 +4,11 @@ import logging
 
 from .models import OptimizationModel, RiskModel
 
-
-from portfawn.plot import PlotPortfolio  # , PlotMultiPortfolio
-from portfawn.portfolio import MeanVariancePortfolio  # , MultiPortfolio
+from portfawn.portfolio import (
+    RandomPortfolio,
+    EquallyWeightedPortfolio,
+    MeanVariancePortfolio,
+)
 from portfawn.models import ClassicOptModel, QuantumOptModel, RiskModel
 from portfawn.backtest import BackTest
 
