@@ -116,9 +116,9 @@ class PortfolioBase:
             columns=[self.name],
         )
 
-        performance = dafin.Performance(returns_assets=returns_portfolio)
+        self._performance = dafin.Performance(returns_assets=returns_portfolio)
 
-        return performance
+        return self._performance
 
     def store_returns_var(self, returns_assets: pd.DataFrame) -> None:
         """
@@ -147,3 +147,16 @@ class PortfolioBase:
         self.asset_list = list(returns_assets.columns)
         self.date_start = returns_assets.index[0]
         self.date_end = returns_assets.index[-1]
+
+    def __str__(self) -> str:
+
+        summary = f"Portfolio: {self.name}\n"
+        # summary += f"\t - Risk Model: {self.risk_model}\n"
+        # summary += f"\t - Optimization Model: {self.optimization_model.objective}\n"
+        summary += f"\t - Asset List: {self.asset_list}\n"
+        summary += f"\t - Asset Weights: {self.asset_weights}\n"
+        summary += f"\t - Start Date: {self.date_start}\n"
+        summary += f"\t - End Date: {self.date_end}\n"
+        summary += f"\t - Performance:\n{self._performance.summary}\n"
+
+        return summary
