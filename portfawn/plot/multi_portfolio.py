@@ -1,6 +1,6 @@
 import logging
 
-from portfawn.plot import Plot
+from .plot import Plot
 
 logger = logging.getLogger(__name__)
 

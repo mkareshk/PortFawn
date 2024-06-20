@@ -3,13 +3,27 @@ import matplotlib.pyplot as plt
 
 from portfawn import (
     BackTest,
-    RandomPortfolio,
     EquallyWeightedPortfolio,
     MeanVariancePortfolio,
+    RandomPortfolio,
 )
 
 # params
-asset_lsit = ["SPY", "GLD", "BND"]
+# asset_lsit = ["SPY", "GLD", "BND"]
+asset_lsit = [
+    "AAPL",
+    "ORCL",
+    "GOOGL",
+    "MSFT",
+    "AMZN",
+    "AVGO",
+    "JPM",
+    "V",
+    "WMT",
+    "XOM",
+    "UNH",
+]
+
 date_start = "2010-01-01"
 date_end = "2022-12-30"
 data_instance = dafin.ReturnsData(asset_lsit)
@@ -28,7 +42,7 @@ backtest = BackTest(
     date_start=date_start,
     date_end=date_end,
     fitting_days=252,
-    evaluation_days=252,
+    evaluation_days=90,
     n_jobs=12,
 )
 backtest.run()

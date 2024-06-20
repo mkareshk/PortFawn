@@ -1,17 +1,16 @@
-from portfawn import BackTest
-from portfawn import MeanVariancePortfolio
+from portfawn import BackTest, MeanVariancePortfolio
 from tests.utils import (
     ASSET_LIST,
-    OBJECTIVES,
-    DATE_START,
     DATE_END,
-    FITTING_DATES,
+    DATE_START,
     EVALUATION_DAYS,
+    FITTING_DATES,
+    N_JOBS,
+    OBJECTIVES,
     RISK_FREE_RATE,
     TARGET_RETURN,
     TARGET_SD,
     WEIGHT_BOUND,
-    N_JOBS,
     check_figure,
 )
 

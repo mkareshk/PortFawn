@@ -20,14 +20,20 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "dwave-system",
-        "dwave-neal",
         "scikit-learn",
         "seaborn",
-        "dafin>=0.0.1",
+        "dafin>=0.0.2",
     ],
     python_requires=">=3.10",
     extras_require={
-        "test": ["pytest", "pytest-cov", "parameterized", "pylint"],
+        "quantum": ["dwave-system>=1.25.0", "dwave-neal>=0.6.0"],
+        "dev": [
+            "pre-commit",
+            "pytest",
+            "pytest-runner",
+            "pytest-cov",
+            "parameterized",
+            "pylint",
+        ],
     },
 )

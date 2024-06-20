@@ -1,13 +1,15 @@
-import time
 import logging
+import time
 
 import dafin
 import pandas as pd
 from joblib import Parallel, delayed
-from portfawn.plot import Plot
+
+from ..plot import Plot
 
 
 class BackTest:
+
     plot = Plot()
     logger = logging.getLogger(__name__)
 

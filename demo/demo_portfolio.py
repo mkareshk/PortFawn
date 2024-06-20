@@ -1,10 +1,6 @@
 import dafin
 
-from portfawn import (
-    RandomPortfolio,
-    EquallyWeightedPortfolio,
-    MeanVariancePortfolio,
-)
+from portfawn import EquallyWeightedPortfolio, MeanVariancePortfolio, RandomPortfolio
 
 # params
 assets_list = ["SPY", "GLD", "BND"]

@@ -1,7 +1,7 @@
 import dafin
 import pandas as pd
 
-from ..models import RiskModel, OptimizationModel
+from ..models import OptimizationModel, RiskModel
 
 
 class PortfolioBase:

@@ -1,8 +1,8 @@
 import pandas as pd
 from dafin import ReturnsData
 
+from ..models import OptimizationModel, RiskModel
 from .base import PortfolioBase
-from ..models import RiskModel, OptimizationModel
 
 
 class MeanVariancePortfolio(PortfolioBase):

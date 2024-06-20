@@ -1,5 +1,5 @@
-import neal
 import dimod
+import neal
 import numpy as np
 import scipy.optimize as sco
 from dwave.system import DWaveCliqueSampler

@@ -1,9 +1,8 @@
-import pytest
 import dafin
+import pytest
 
-from portfawn import MeanVariancePortfolio, PlotPortfolio
+from portfawn import MeanVariancePortfolio, OptimizationModel, PlotPortfolio, RiskModel
 from tests.utils import ASSET_LIST, OBJECTIVES, check_figure
-from portfawn import RiskModel, OptimizationModel
 
 
 @pytest.mark.parametrize("objective", OBJECTIVES, ids=OBJECTIVES)

@@ -1,10 +1,9 @@
-import pytest
 import pandas as pd
+import pytest
 from dafin import Returns
 
 from portfawn.models.risk import RiskModel
 from tests.utils import ASSET_LIST
-
 
 returns_data = Returns(asset_list=ASSET_LIST)
 

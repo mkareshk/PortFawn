@@ -1,16 +1,14 @@
-import imp
 import logging
 
-
-from .models import OptimizationModel, RiskModel
-
+from portfawn.backtest import BackTest
+from portfawn.models import ClassicOptModel, QuantumOptModel, RiskModel
 from portfawn.portfolio import (
-    RandomPortfolio,
     EquallyWeightedPortfolio,
     MeanVariancePortfolio,
+    RandomPortfolio,
 )
-from portfawn.models import ClassicOptModel, QuantumOptModel, RiskModel
-from portfawn.backtest import BackTest
+
+from .models import OptimizationModel, RiskModel
 
 logging.basicConfig(
     format="[%(levelname)s] [%(asctime)s] (%(name)s): %(message)s",

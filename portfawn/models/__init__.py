@@ -1,6 +1,2 @@
+from .optimization import ClassicOptModel, OptimizationModel, QuantumOptModel
 from .risk import RiskModel
-from .optimization import (
-    OptimizationModel,
-    ClassicOptModel,
-    QuantumOptModel,
-)

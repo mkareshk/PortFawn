@@ -1,12 +1,12 @@
 import logging
 
+import matplotlib.pylab as pylab
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.pylab as pylab
 import seaborn as sns
-from scipy.spatial import ConvexHull
 from matplotlib.ticker import FormatStrFormatter
+from scipy.spatial import ConvexHull
 
 sns.set()
 sns.set_style("whitegrid")

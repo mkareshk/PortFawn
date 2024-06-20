@@ -1,8 +1,7 @@
 import logging
 
-from portfawn.portfolio import RandomPortfolio
-
 from portfawn.plot import Plot
+from portfawn.portfolio import RandomPortfolio
 
 logger = logging.getLogger(__name__)
 
