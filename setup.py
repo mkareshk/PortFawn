@@ -22,7 +22,7 @@ setuptools.setup(
     install_requires=[
         "scikit-learn",
         "seaborn",
-        "dafin>=0.0.2",
+        "dafin>=0.0.3",
     ],
     python_requires=">=3.10",
     extras_require={
