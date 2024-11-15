@@ -18,3 +18,12 @@ install_precommit:
 
 run_precommit:
 	pre-commit run --all-files
+
+install_dev:
+	python -m pip install -U pip
+	pip install -e .
+	pip install -e ."[quantum]"
+	pip install -e ."[dev]"
+	pre-commit install
+	pre-commit autoupdate
+	pre-commit run --all-files
