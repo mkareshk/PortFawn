@@ -2,75 +2,97 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 
-class RiskModel:
+class MeanVarianceRiskModel:
     """
-    A class representing a risk assessment model based on sampling techniques.
+    A risk assessment model based on sampling techniques for the mean-variance model.
 
     Attributes:
     -----------
     sampling_type : str, default="standard"
-        Type of sampling to be used. Possible values include "standard".
+        Type of sampling to be used. Possible values include "standard" and "bootstrapping".
     sample_num : int, default=1000
         Number of samples to be drawn.
-    sample_size : int, default=10
+    sample_size : int, default=100
         Size of each sample.
-    agg_func : str, default="median"
-        Aggregation function to be applied on the samples. E.g., "median".
-
-    Example:
-    --------
-    >>> model = RiskModel()
-    >>> model.sampling_type
-    'standard'
-    >>> model.sample_num
-    1000
-    >>> model.sample_size
-    10
-    >>> model.agg_func
-    'median'
+    agg_func : str, default="mean"
+        Aggregation function to be applied on the samples. Default is "mean".
+    random_state : int or None, default=None
+        Random state for reproducibility.
     """
 
     def __init__(
         self,
         sampling_type: str = "standard",
         sample_num: int = 1000,
-        sample_size: int = 10,
-        agg_func: str = "median",
+        sample_size: int = 100,
+        agg_func: str = "mean",
+        random_state: int = None,
     ) -> None:
         """
-        Initializes the RiskModel with the specified parameters.
+        Initialize the MeanVarianceRiskModel with the specified parameters.
 
         Parameters:
         -----------
         sampling_type : str, default="standard"
-            Type of sampling to be used.
+            Type of sampling to be used. Possible values include "standard" and "bootstrapping".
         sample_num : int, default=1000
             Number of samples to be drawn.
-        sample_size : int, default=10
+        sample_size : int, default=100
             Size of each sample.
-        agg_func : str, default="median"
-            Aggregation function to be applied on the samples.
+        agg_func : str, default="mean"
+            Aggregation function to be applied on the samples. Must be "mean".
+        random_state : int or None, default=None
+            Random state for reproducibility.
         """
+        VALID_SAMPLING_TYPES = {"standard", "bootstrapping"}
+        if sampling_type not in VALID_SAMPLING_TYPES:
+            raise ValueError(
+                f"Invalid sampling_type '{sampling_type}'. Must be one of {VALID_SAMPLING_TYPES}."
+            )
+
+        VALID_AGG_FUNCS = {"mean"}
+        if agg_func not in VALID_AGG_FUNCS:
+            raise ValueError(
+                f"Invalid agg_func '{agg_func}'. Must be one of {VALID_AGG_FUNCS}."
+            )
+
         self.sampling_type = sampling_type
         self.sample_num = sample_num
         self.sample_size = sample_size
         self.agg_func = agg_func
+        self.random_state = random_state
 
-    def evaluate(self, returns):
-        if self.sampling_type == "standard":  # simple, but unstable
-            return self.standard(returns=returns)
+    def evaluate(self, returns: pd.DataFrame) -> Tuple[pd.Series, pd.DataFrame]:
+        """
+        Evaluate the risk model using the provided returns data.
 
-        elif self.sampling_type == "bootstrapping":  # for robust stats
-            return self.bootstrapping(returns=returns)
+        Parameters:
+        -----------
+        returns : pd.DataFrame
+            DataFrame containing the returns of assets.
 
+        Returns:
+        --------
+        Tuple[pd.Series, pd.DataFrame]
+            A tuple containing:
+            1. pd.Series: Expected returns of the assets.
+            2. pd.DataFrame: Covariance matrix of the assets.
+        """
+        if self.sampling_type == "standard":
+            return self._standard(returns=returns)
+        elif self.sampling_type == "bootstrapping":
+            return self._bootstrapping(returns=returns)
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                f"Sampling type '{self.sampling_type}' is not implemented."
+            )
 
-    def standard(self, returns: pd.DataFrame) -> Tuple[pd.Series, pd.DataFrame]:
+    def _standard(self, returns: pd.DataFrame) -> Tuple[pd.Series, pd.DataFrame]:
         """
-        Computes the mean (linear biases) and covariance (quadratic biases) of the provided returns.
+        Compute the expected returns and covariance matrix of the provided returns.
 
         Parameters:
         -----------
@@ -81,38 +103,17 @@ class RiskModel:
         --------
         Tuple[pd.Series, pd.DataFrame]
             A tuple containing:
-            1. pd.Series: Mean returns (linear biases) of the assets.
-            2. pd.DataFrame: Covariance matrix (quadratic biases) of the assets.
-
-        Example:
-        --------
-        >>> # Using a mock DataFrame for demonstration
-        ... returns = pd.DataFrame({
-        ...     'A': [0.01, 0.02, -0.01],
-        ...     'B': [0.02, -0.01, 0.03]
-        ... })
-        ... linear_biases, quadratic_biases = standard(None, returns)
-        >>> linear_biases
-        A    0.006667
-        B    0.013333
-        dtype: float64
-        >>> quadratic_biases
-                A         B
-        A  0.000178 -0.000178
-        B -0.000178  0.000378
+            1. pd.Series: Expected returns of the assets.
+            2. pd.DataFrame: Covariance matrix of the assets.
         """
+        returns = returns.dropna()
+        expected_returns = returns.mean()
+        covariance_matrix = returns.cov()
+        return expected_returns, covariance_matrix
 
-        # Calculate the mean of returns for each asset
-        linear_biases = returns.mean()
-
-        # Calculate the covariance matrix of returns
-        quadratic_biases = returns.cov()
-
-        return linear_biases, quadratic_biases
-
-    def bootstrapping(self, returns: pd.DataFrame) -> Tuple[pd.Series, pd.DataFrame]:
+    def _bootstrapping(self, returns: pd.DataFrame) -> Tuple[pd.Series, pd.DataFrame]:
         """
-        Perform bootstrapping on returns to compute linear and quadratic biases.
+        Perform bootstrapping on returns to compute expected returns and covariance matrix.
 
         Parameters:
         -----------
@@ -123,49 +124,66 @@ class RiskModel:
         --------
         Tuple[pd.Series, pd.DataFrame]
             A tuple containing:
-            1. pd.Series: Linear biases of the assets based on bootstrapped samples.
-            2. pd.DataFrame: Quadratic biases (covariance) of the assets based on bootstrapped samples.
-
-        Example:
-        --------
-        >>> # Using a mock DataFrame for demonstration
-        ... returns = pd.DataFrame({
-        ...     'A': [0.01, 0.02, -0.01, 0.015, 0.03],
-        ...     'B': [0.02, -0.01, 0.03, 0.01, 0.025]
-        ... })
-        ... mock_instance = type('', (), {})()  # create a mock instance
-        ... mock_instance.sample_num = 3
-        ... mock_instance.sample_size = 2
-        ... mock_instance.agg_func = 'median'
-        ... linear_biases, quadratic_biases = bootstrapping(mock_instance, returns)
-        >>> linear_biases
-        A    0.0175
-        B    0.0175
-        dtype: float64
+            1. pd.Series: Expected returns of the assets.
+            2. pd.DataFrame: Covariance matrix of the assets.
         """
+        returns = returns.dropna()
 
-        # List to store means and covariances for each sample
-        linear_list = []
-        quadratic_list = []
+        if self.sample_size <= returns.shape[1]:
+            raise ValueError("Sample size must be greater than the number of assets.")
 
-        # Extract samples and compute statistics
-        for _ in range(self.sample_num):
-            sample = returns.sample(n=self.sample_size, replace=True)
-            agg_function = getattr(sample, self.agg_func)
+        def compute_sample(i):
+            rng = (
+                np.random.default_rng(self.random_state + i)
+                if self.random_state is not None
+                else np.random.default_rng()
+            )
+            sample = returns.sample(
+                n=self.sample_size, replace=True, random_state=rng.integers(1e9)
+            )
+            expected_returns = sample.mean()
+            covariance_matrix = sample.cov()
+            return expected_returns, covariance_matrix
 
-            linear_list.append(agg_function())
-            quadratic_list.append(sample.cov())
-
-        # Compute aggregated statistics across all samples
-        return_df = pd.DataFrame(linear_list)
-        linear_biases = getattr(return_df, self.agg_func)()
-
-        risk_matrix = np.array([cov_matrix.to_numpy() for cov_matrix in quadratic_list])
-        risk_aggregator = getattr(np, self.agg_func)
-
-        risk_matrix = risk_aggregator(risk_matrix, axis=0)
-        quadratic_biases = pd.DataFrame(
-            risk_matrix, index=return_df.columns, columns=return_df.columns
+        results = Parallel(n_jobs=-1)(
+            delayed(compute_sample)(i) for i in range(self.sample_num)
         )
 
-        return linear_biases, quadratic_biases
+        expected_returns_list, covariance_matrices_list = zip(*results)
+        expected_returns_df = pd.DataFrame(expected_returns_list)
+        covariance_matrices = np.stack(
+            [cov.values for cov in covariance_matrices_list], axis=0
+        )
+
+        expected_returns = expected_returns_df.mean()
+
+        covariance_matrix_mean = np.mean(covariance_matrices, axis=0)
+        covariance_matrix_psd = self._nearest_positive_semidefinite(
+            covariance_matrix_mean
+        )
+        covariance_matrix = pd.DataFrame(
+            covariance_matrix_psd, index=returns.columns, columns=returns.columns
+        )
+
+        return expected_returns, covariance_matrix
+
+    @staticmethod
+    def _nearest_positive_semidefinite(matrix: np.ndarray) -> np.ndarray:
+        """
+        Find the nearest positive semi-definite matrix to the input.
+
+        Parameters:
+        -----------
+        matrix : np.ndarray
+            Symmetric matrix.
+
+        Returns:
+        --------
+        np.ndarray
+            Nearest positive semi-definite matrix.
+        """
+        sym_matrix = (matrix + matrix.T) / 2
+        eigvals, eigvecs = np.linalg.eigh(sym_matrix)
+        eigvals[eigvals < 0] = 0
+        psd_matrix = eigvecs @ np.diag(eigvals) @ eigvecs.T
+        return psd_matrix

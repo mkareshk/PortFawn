@@ -1,58 +1,85 @@
-import dafin
-import pandas as pd
+import logging
+from typing import Optional
 
-from ..models import OptimizationModel, RiskModel
+import numpy as np
+import pandas as pd
+from dafin import Performance, ReturnsData
+
+from ..models import MeanVarianceRiskModel, OptimizationModel
+
+logger = logging.getLogger(__name__)
 
 
 class PortfolioBase:
     """
-    Base class for portfolios, providing fundamental structure and attributes.
+    Base class for different portfolio types.
+
+    This class provides a framework for defining portfolio strategies by handling
+    asset data, risk models, optimization models, and performance evaluation.
 
     Attributes:
     -----------
     name : str
         Name of the portfolio.
-    risk_model : RiskModel, optional
-        Model used to assess the risk associated with the portfolio.
+    risk_model : MeanVarianceRiskModel, optional
+        The risk model used to evaluate portfolio risks.
     optimization_model : OptimizationModel, optional
-        Model used to optimize the portfolio.
-
-    Example:
-    --------
-    >>> portfolio = PortfolioBase(name="Sample Portfolio")
-    >>> portfolio.name
-    'Sample Portfolio'
-    >>> portfolio.risk_model is None
-    True
-    >>> portfolio.optimization_model is None
-    True
+        The optimization model used for portfolio allocation.
+    rf_asset : str
+        The symbol representing the risk-free asset.
+    benchmark_asset : str
+        The symbol representing the benchmark asset.
+    asset_list : list
+        List of asset names included in the portfolio.
+    asset_weights : dict
+        Dictionary of asset names and their corresponding weights.
+    date_start : pd.Timestamp
+        Start date of the data.
+    date_end : pd.Timestamp
+        End date of the data.
+    _w : np.ndarray
+        Array of weights assigned to assets.
+    _performance : Performance
+        Performance metrics of the portfolio.
     """
 
     def __init__(
         self,
-        name: str,
-        risk_model: "RiskModel" = None,
-        optimization_model: "OptimizationModel" = None,
+        name: str = None,
+        risk_model: Optional[MeanVarianceRiskModel] = None,
+        optimization_model: Optional[OptimizationModel] = None,
+        rf_asset: str = "BND",
+        benchmark_asset: str = "SPY",
     ) -> None:
         """
-        Initializes the PortfolioBase with a name, and optionally with a risk and optimization model.
+        Initializes the PortfolioBase with the given parameters.
 
         Parameters:
         -----------
-        name : str
+        name : str, optional
             Name of the portfolio.
-        risk_model : RiskModel, optional
-            Model used to assess risk. Defaults to None.
+        risk_model : MeanVarianceRiskModel, optional
+            The risk model to use for the portfolio.
         optimization_model : OptimizationModel, optional
-            Model used for optimization. Defaults to None.
+            The optimization model to use for the portfolio.
+        rf_asset : str, optional
+            The symbol of the risk-free asset. Default is "BND".
+        benchmark_asset : str, optional
+            The symbol of the benchmark asset. Default is "SPY".
         """
+
         self.name = name
         self.risk_model = risk_model
         self.optimization_model = optimization_model
+        self.rf_asset = rf_asset
+        self.benchmark_asset = benchmark_asset
 
-    def evaluate(self, returns_assets: pd.DataFrame) -> pd.DataFrame:
+        self.data_rf = ReturnsData(assets=self.rf_asset)
+        self.data_benchmark = ReturnsData(assets=self.benchmark_asset)
+
+    def evaluate(self, returns_assets: pd.DataFrame) -> Performance:
         """
-        Evaluates the portfolio returns based on the provided asset returns.
+        Evaluates the portfolio performance.
 
         Parameters:
         -----------
@@ -61,62 +88,63 @@ class PortfolioBase:
 
         Returns:
         --------
-        pd.DataFrame
-            DataFrame containing the portfolio returns.
+        Performance
+            The performance metrics of the portfolio.
 
         Raises:
         -------
         ValueError
-            If there are inconsistencies between assets and weights.
-
-        Example:
-        --------
-        >>> # Mocking instance variables for demonstration
-        ... self = type('', (), {})()
-        ... self.asset_list = ['A', 'B']
-        ... self.asset_weights = {'A': 0.5, 'B': 0.5}
-        ... self._w = np.array([0.5, 0.5])
-        ... self.name = "Sample Portfolio"
-        ... returns = pd.DataFrame({'A': [0.01, 0.02], 'B': [-0.01, 0.03]})
-        >>> evaluate(self, returns)
-            Sample Portfolio
-        0                0.0
-        1                0.025
+            If the portfolio is not properly fitted or if the input data is inconsistent
+            with the portfolio's setup.
         """
 
         # Check if asset list and asset weights are initialized
-        if not (self.asset_list and self.asset_weights):
-            raise ValueError("Fit the portfolio before evaluation.")
+        if not (hasattr(self, "asset_list") and hasattr(self, "asset_weights")):
+            msg = "Fit the portfolio before evaluation."
+            logger.error(msg)
+            raise ValueError(msg)
 
         # Ensure consistency between asset list and asset weights
         if len(self.asset_list) != len(self.asset_weights):
-            raise ValueError(
-                f"Asset list ({self.asset_list}) and asset weights ({self.asset_weights}) are inconsistent."
-            )
+            msg = f"Asset list ({self.asset_list}) and asset weights ({self.asset_weights}) are inconsistent."
+            logger.error(msg)
+            raise ValueError(msg)
 
         # Ensure consistency between asset weights dictionary and numpy format
         if self._w.shape[0] != len(self.asset_weights):
-            raise ValueError(
-                f"Asset weights dictionary ({self.asset_weights}) and asset weights in numpy format ({self._w}) are inconsistent."
-            )
+            msg = f"Asset weights dictionary ({self.asset_weights}) and asset weights in numpy format ({self._w}) are inconsistent."
+            logger.error(msg)
+            raise ValueError(msg)
 
         # Ensure fitted asset weights and asset returns to evaluate are consistent
         if set(returns_assets.columns) != set(self.asset_list):
-            raise ValueError(
-                f"Fitted asset weights ({self.asset_weights}) and asset returns to evaluate are inconsistent."
-            )
-
-        # Calculate portfolio returns
-        returns_portfolio_np = returns_assets.to_numpy().dot(self._w)
+            msg = f"Fitted asset weights ({self.asset_weights}) and asset returns to evaluate are inconsistent."
+            logger.error(msg)
+            raise ValueError(msg)
 
         # Convert portfolio returns to DataFrame
         returns_portfolio = pd.DataFrame(
-            returns_portfolio_np,
+            returns_assets.to_numpy().dot(self._w),
             index=returns_assets.index,
             columns=[self.name],
         )
+        date_start = returns_portfolio.index[0]
+        date_end = returns_portfolio.index[-1]
 
-        self._performance = dafin.Performance(returns_assets=returns_portfolio)
+        logger.debug(f"Evaluating portfolio from {date_start} to {date_end}")
+
+        returns_rf: pd.DataFrame = self.data_rf.get_returns(
+            date_start=date_start, date_end=date_end
+        )
+        returns_benchmark: pd.DataFrame = self.data_benchmark.get_returns(
+            date_start=date_start, date_end=date_end
+        )
+
+        self._performance: Performance = Performance(
+            returns_assets=returns_portfolio,
+            returns_rf=returns_rf,
+            returns_benchmark=returns_benchmark,
+        )
 
         return self._performance
 
@@ -128,35 +156,49 @@ class PortfolioBase:
         -----------
         returns_assets : pd.DataFrame
             DataFrame containing the returns of assets.
-
-        Example:
-        --------
-        >>> # Mocking instance variables for demonstration
-        ... self = type('', (), {})()
-        ... returns = pd.DataFrame({'A': [0.01, 0.02], 'B': [-0.01, 0.03]}, index=["2023-01-01", "2023-01-02"])
-        >>> store_returns_var(self, returns)
-        >>> self.asset_list
-        ['A', 'B']
-        >>> self.date_start
-        '2023-01-01'
-        >>> self.date_end
-        '2023-01-02'
         """
 
-        # Store column names, start date, and end date from the provided DataFrame
         self.asset_list = list(returns_assets.columns)
         self.date_start = returns_assets.index[0]
         self.date_end = returns_assets.index[-1]
 
+        logger.debug(f"Asset list: {self.asset_list}")
+        logger.debug(f"Date range from {self.date_start} to {self.date_end}")
+
     def __str__(self) -> str:
+        """
+        Returns a string representation of the portfolio, summarizing its key attributes.
+
+        Returns:
+        --------
+        str
+            Summary of the portfolio's attributes.
+        """
 
         summary = f"Portfolio: {self.name}\n"
-        # summary += f"\t - Risk Model: {self.risk_model}\n"
-        # summary += f"\t - Optimization Model: {self.optimization_model.objective}\n"
-        summary += f"\t - Asset List: {self.asset_list}\n"
-        summary += f"\t - Asset Weights: {self.asset_weights}\n"
-        summary += f"\t - Start Date: {self.date_start}\n"
-        summary += f"\t - End Date: {self.date_end}\n"
-        summary += f"\t - Performance:\n{self._performance.summary}\n"
+        if self.risk_model:
+            summary += f"\t - Risk Model: {self.risk_model}\n"
+        if self.optimization_model:
+            summary += f"\t - Optimization Model: {self.optimization_model.objective}\n"
+        if hasattr(self, "asset_list"):
+            summary += f"\t - Asset List: {self.asset_list}\n"
+        else:
+            summary += "\t - Asset List: Not set.\n"
+        if hasattr(self, "asset_weights"):
+            summary += f"\t - Asset Weights: {self.asset_weights}\n"
+        else:
+            summary += "\t - Asset Weights: Not set.\n"
+        if hasattr(self, "date_start"):
+            summary += f"\t - Start Date: {self.date_start}\n"
+        else:
+            summary += "\t - Start Date: Not set.\n"
+        if hasattr(self, "date_end"):
+            summary += f"\t - End Date: {self.date_end}\n"
+        else:
+            summary += "\t - End Date: Not set.\n"
+        if hasattr(self, "_performance"):
+            summary += f"\t - Performance:\n{self._performance.summary}\n"
+        else:
+            summary += "\t - Performance: Not evaluated yet.\n"
 
         return summary

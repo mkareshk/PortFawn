@@ -1,70 +1,94 @@
-import pandas as pd
-from dafin import ReturnsData
+import logging
+from typing import Optional
 
-from ..models import OptimizationModel, RiskModel
+import numpy as np
+import pandas as pd
+
+from ..models import MeanVarianceRiskModel, OptimizationModel
 from .base import PortfolioBase
+
+logger = logging.getLogger(__name__)
 
 
 class MeanVariancePortfolio(PortfolioBase):
     """
-    Represents a portfolio optimized based on the Mean-Variance optimization approach.
+    Represents a portfolio optimized using the Mean-Variance optimization approach.
 
-    Inherits from:
-    --------------
-    PortfolioBase : Base class for portfolios.
+    This class leverages a specified risk model and optimization model to generate
+    an optimal portfolio allocation. If no models are provided, default instances
+    of `MeanVarianceRiskModel` and `OptimizationModel` are used.
 
-    Example:
-    --------
-    >>> # Using mock classes and methods for demonstration
-    ... class MockRiskModel:
-    ...     def evaluate(self, returns_assets):
-    ...         return ([1, 2], [3, 4])
-    ...
-    ... class MockOptimizationModel:
-    ...     def optimize(self, linear_biases, quadratic_biases):
-    ...         return [0.5, 0.5]
-    ...
-    ... portfolio = MeanVariancePortfolio("MVP", MockRiskModel(), MockOptimizationModel())
-    ... returns = pd.DataFrame({'A': [0.01, 0.02], 'B': [-0.01, 0.03]})
-    ... portfolio.fit(returns)
-    <...MeanVariancePortfolio object at ...>
-    >>> portfolio.asset_weights
-    {'A': 0.5, 'B': 0.5}
+    Attributes:
+    -----------
+    asset_list : list
+        List of asset names available in the portfolio.
+    asset_weights : dict
+        Dictionary of assets and their corresponding optimized weights.
+    _w : np.ndarray
+        Array of optimized weights assigned to assets.
     """
 
     def __init__(
         self,
         name: str = "mean_variance_portfolio",
-        risk_model: "RiskModel" = RiskModel(),
-        optimization_model: "OptimizationModel" = OptimizationModel(objective="MSRP"),
+        risk_model: Optional[MeanVarianceRiskModel] = None,
+        optimization_model: Optional[OptimizationModel] = None,
+        rf_asset: str = "BND",
+        benchmark_asset: str = "SPY",
     ) -> None:
         """
-        Initializes the MeanVariancePortfolio with the given name, risk model, and optimization model.
+        Initializes the MeanVariancePortfolio with the given parameters.
 
         Parameters:
         -----------
-        name : str
-            Name of the portfolio.
-        risk_model : RiskModel
-            Model used to assess the risk associated with the portfolio.
-        optimization_model : OptimizationModel
-            Model used to optimize the portfolio based on mean-variance criteria.
+        name : str, optional
+            Name of the portfolio. Default is "mean_variance_portfolio".
+        risk_model : MeanVarianceRiskModel, optional
+            The risk model used to evaluate the asset returns. If None, a default
+            `MeanVarianceRiskModel` instance is created.
+        optimization_model : OptimizationModel, optional
+            The optimization model used to calculate optimal weights. If None,
+            a default `OptimizationModel` instance is created with "MSRP" as the
+            objective.
+        rf_asset : str, optional
+            The symbol representing the risk-free asset. Default is "BND".
+        benchmark_asset : str, optional
+            The symbol representing the benchmark asset. Default is "SPY".
         """
-        super().__init__(name, risk_model, optimization_model)
 
-    def fit(self, returns_assets: ReturnsData) -> "MeanVariancePortfolio":
+        if risk_model is None:
+            risk_model = MeanVarianceRiskModel()
+
+        if optimization_model is None:
+            optimization_model = OptimizationModel(objective="MSRP")
+
+        super().__init__(
+            name, risk_model, optimization_model, rf_asset, benchmark_asset
+        )
+
+    def fit(self, returns_assets: pd.DataFrame) -> "MeanVariancePortfolio":
         """
-        Fits the portfolio by evaluating the risk and then optimizing using the provided risk and optimization models.
+        Fits the portfolio by evaluating risk and optimizing weights.
+
+        This method evaluates the risk of the provided asset returns using the
+        specified risk model and then calculates optimal weights using the optimization
+        model. The resulting weights are normalized to sum to 1.
 
         Parameters:
         -----------
         returns_assets : pd.DataFrame
-            DataFrame containing the returns of assets.
+            A DataFrame where rows represent time periods and columns represent
+            asset returns.
 
         Returns:
         --------
         MeanVariancePortfolio
-            Returns the instance of the class.
+            Returns the instance of the `MeanVariancePortfolio` class.
+
+        Raises:
+        -------
+        ValueError
+            If optimization fails or if the resulting weights do not sum to 1.
         """
 
         # Store essential details from the asset returns
@@ -72,11 +96,24 @@ class MeanVariancePortfolio(PortfolioBase):
 
         # Evaluate the risk associated with the assets
         linear_biases, quadratic_biases = self.risk_model.evaluate(returns_assets)
+        logger.debug("Risk evaluation completed.")
 
-        # Optimize the asset weights using the provided biases
-        self._w = self.optimization_model.optimize(linear_biases, quadratic_biases)
+        try:
+            # Optimize the asset weights using the provided biases
+            self._w = self.optimization_model.optimize(linear_biases, quadratic_biases)
+        except Exception as e:
+            logger.error(f"Optimization failed: {e}")
+            raise ValueError(f"Optimization failed: {e}")
+
+        # Validate weights
+        if not np.isclose(np.sum(self._w), 1):
+            msg = "Optimized weights do not sum to 1."
+            logger.error(msg)
+            raise ValueError(msg)
 
         # Store the asset weights as a dictionary
         self.asset_weights = dict(zip(self.asset_list, self._w))
+
+        logger.debug(f"Optimized weights: {self.asset_weights}")
 
         return self
