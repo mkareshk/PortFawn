@@ -9,31 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class RandomPortfolio(PortfolioBase):
-    """
-    A portfolio class that assigns random weights to assets.
-
-    This class inherits from `PortfolioBase` and is used for creating a portfolio
-    with randomly generated weights for a given set of assets. It ensures that
-    the weights are normalized to sum up to 1.
-
-    Attributes:
-    -----------
-    asset_list : list
-        List of asset names available in the portfolio.
-    asset_weights : dict
-        Dictionary of assets and their corresponding weights.
-    _w : np.ndarray
-        Array of weights assigned to assets.
-    """
 
     def __init__(self, name: str = "random_portfolio") -> None:
         """
         Initializes the RandomPortfolio with a given name.
 
-        Parameters:
-        -----------
-        name : str, optional
-            Name of the portfolio. Default is "random_portfolio".
+        Args:
+            name (str, optional): Name of the portfolio. Defaults to "random_portfolio".
         """
 
         super().__init__(name)
@@ -47,21 +29,15 @@ class RandomPortfolio(PortfolioBase):
         sum to 1. The asset weights are then stored in the `asset_weights`
         attribute as a dictionary.
 
-        Parameters:
-        -----------
-        returns_assets : pd.DataFrame
-            A DataFrame where rows represent time periods and columns represent
-            asset returns.
+        Args:
+            returns_assets (pd.DataFrame): A DataFrame where rows represent time periods
+                and columns represent asset returns.
 
         Returns:
-        --------
-        RandomPortfolio
-            Returns the instance of the `RandomPortfolio` class.
+            RandomPortfolio: The instance of the `RandomPortfolio` class.
 
         Raises:
-        -------
-        ValueError
-            If the asset list is empty or invalid weights are generated.
+            ValueError: If the asset list is empty or invalid weights are generated.
         """
 
         # Store essential details from the asset returns

@@ -6,16 +6,6 @@ from dwave.system import DWaveCliqueSampler
 
 
 class QuantumOptModel:
-    """
-    A class to perform optimization using quantum annealing techniques.
-
-    Attributes:
-        objective (str): The objective type for the optimization. Currently supports "BMOP".
-        backend (str): The backend quantum system to use. Options are "neal" (simulated annealing) or "qpu" (D-Wave QPU).
-        annealing_time (int): The annealing time for quantum annealing (in microseconds).
-        num_reads (int): The number of reads (samples) from the sampler.
-        num_sweeps (int): The number of sweeps for simulated annealing.
-    """
 
     def __init__(
         self,
@@ -85,45 +75,27 @@ class QuantumOptModel:
             ValueError: If no samples are returned by the sampler.
         """
 
+        # Calculate the required QUBO matrix
+        quad_term = np.triu(quadratic_biases, k=1)
+        lin_term = np.zeros(quadratic_biases.shape, float)
+        np.fill_diagonal(lin_term, -linear_biases)
+        Q = quad_term + lin_term
+
+        # Create BQM from QUBO and sample
+        bqm = dimod.BQM.from_qubo(Q, 0)
+        samples = self._sampler.sample(
+            bqm, num_reads=self._num_reads, num_sweeps=self._num_sweeps
+        )
+
+        # Extract the weights from the sample and normalize
         weight_shape = (len(linear_biases), 1)
-
-        asset_cov = quadratic_biases.to_numpy()
-        asset_returns = linear_biases.to_numpy()
-
-        # risk
-        risk_term = np.triu(asset_cov, k=1)
-
-        # returns
-        returns_term = np.zeros(asset_cov.shape, float)
-        np.fill_diagonal(returns_term, -asset_returns)
-
-        # Q
-        Q = risk_term + returns_term
-
-        # Sampling
-        samples = self._sampler.sample_qubo(Q)
-
         w = np.array(list(samples.first.sample.values())).reshape(weight_shape)
         if not sum(w):
             w = np.ones(weight_shape)
-
         return w / np.sum(w)
 
 
 class ClassicOptModel:
-    """
-    A class to perform classical optimization of portfolio weights.
-
-    Attributes:
-        objective (str): The optimization objective, such as "MRP" (mean return portfolio),
-            "MVP" (minimum variance portfolio), or "MSRP" (maximum Sharpe ratio portfolio).
-        risk_free_rate (float): The risk-free rate for optimization. Defaults to 0.0.
-        scipy_params (dict): Parameters for the scipy optimizer, such as `maxiter`, `disp`, and `ftol`.
-        target_return (float): Target return for the portfolio optimization. Defaults to 0.2.
-        target_sd (float): Target standard deviation for the portfolio. Defaults to 0.2.
-        weight_bound (tuple): Bounds for individual weights as (min, max). Defaults to (0.0, 1.0).
-        init_point (np.array): Initial guess for the optimization. If None, a uniform allocation is used.
-    """
 
     def __init__(
         self,
@@ -189,29 +161,26 @@ class ClassicOptModel:
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
         if self._objective == "MRP":
-            # Constraint: portfolio return >= target_return
             constraints.append(
                 {
                     "type": "ineq",
-                    "fun": lambda w: linear_biases.dot(w) - self._target_return,
-                }
-            )
-
-            def cost_function(w):
-                return w.T.dot(quadratic_biases).dot(w)
-
-        elif self._objective == "MVP":
-            # Constraint: portfolio risk <= target_sd
-            constraints.append(
-                {
-                    "type": "ineq",
-                    "fun": lambda w: self._target_sd
-                    - np.sqrt(w.T.dot(quadratic_biases).dot(w)),
+                    "fun": lambda w: w.T.dot(linear_biases) - self._target_return,
                 }
             )
 
             def cost_function(w):
                 return -linear_biases.dot(w)
+
+        elif self._objective == "MVP":
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda w: self._target_sd - linear_biases.dot(w),
+                }
+            )
+
+            def cost_function(w):
+                return np.sqrt(w.T.dot(quadratic_biases).dot(w))
 
         elif self._objective == "MSRP":
 
@@ -256,22 +225,6 @@ class ClassicOptModel:
 
 
 class OptimizationModel:
-    """
-    A unified interface for performing optimization using quantum or classical methods.
-
-    This class serves as a wrapper for both `QuantumOptModel` and `ClassicOptModel`,
-    enabling the selection of optimization methods based on the objective.
-
-    Attributes:
-        objective (str): The optimization objective. Supported objectives are:
-            - "BMOP" for quantum-based optimization.
-            - "MRP" (Mean Return Portfolio) for classical optimization.
-            - "MVP" (Minimum Variance Portfolio) for classical optimization.
-            - "MSRP" (Maximum Sharpe Ratio Portfolio) for classical optimization.
-        optimization_params (dict): A dictionary of parameters for the optimization process.
-            These parameters differ based on the selected backend or objective.
-        risk_free_rate (float): The risk-free rate, used in objectives like MSRP for Sharpe ratio calculation.
-    """
 
     def __init__(
         self,

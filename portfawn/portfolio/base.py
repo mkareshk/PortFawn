@@ -11,37 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class PortfolioBase:
-    """
-    Base class for different portfolio types.
-
-    This class provides a framework for defining portfolio strategies by handling
-    asset data, risk models, optimization models, and performance evaluation.
-
-    Attributes:
-    -----------
-    name : str
-        Name of the portfolio.
-    risk_model : MeanVarianceRiskModel, optional
-        The risk model used to evaluate portfolio risks.
-    optimization_model : OptimizationModel, optional
-        The optimization model used for portfolio allocation.
-    rf_asset : str
-        The symbol representing the risk-free asset.
-    benchmark_asset : str
-        The symbol representing the benchmark asset.
-    asset_list : list
-        List of asset names included in the portfolio.
-    asset_weights : dict
-        Dictionary of asset names and their corresponding weights.
-    date_start : pd.Timestamp
-        Start date of the data.
-    date_end : pd.Timestamp
-        End date of the data.
-    _w : np.ndarray
-        Array of weights assigned to assets.
-    _performance : Performance
-        Performance metrics of the portfolio.
-    """
 
     def __init__(
         self,
@@ -54,18 +23,12 @@ class PortfolioBase:
         """
         Initializes the PortfolioBase with the given parameters.
 
-        Parameters:
-        -----------
-        name : str, optional
-            Name of the portfolio.
-        risk_model : MeanVarianceRiskModel, optional
-            The risk model to use for the portfolio.
-        optimization_model : OptimizationModel, optional
-            The optimization model to use for the portfolio.
-        rf_asset : str, optional
-            The symbol of the risk-free asset. Default is "BND".
-        benchmark_asset : str, optional
-            The symbol of the benchmark asset. Default is "SPY".
+        Args:
+            name (str, optional): Name of the portfolio.
+            risk_model (MeanVarianceRiskModel, optional): The risk model to use for the portfolio.
+            optimization_model (OptimizationModel, optional): The optimization model to use for the portfolio.
+            rf_asset (str, optional): The symbol of the risk-free asset. Defaults to "BND".
+            benchmark_asset (str, optional): The symbol of the benchmark asset. Defaults to "SPY".
         """
 
         self.name = name
@@ -81,21 +44,15 @@ class PortfolioBase:
         """
         Evaluates the portfolio performance.
 
-        Parameters:
-        -----------
-        returns_assets : pd.DataFrame
-            DataFrame containing the returns of assets.
+        Args:
+            returns_assets (pd.DataFrame): DataFrame containing the returns of assets.
 
         Returns:
-        --------
-        Performance
-            The performance metrics of the portfolio.
+            Performance: The performance metrics of the portfolio.
 
         Raises:
-        -------
-        ValueError
-            If the portfolio is not properly fitted or if the input data is inconsistent
-            with the portfolio's setup.
+            ValueError: If the portfolio is not properly fitted or if the input data is inconsistent
+                with the portfolio's setup.
         """
 
         # Check if asset list and asset weights are initialized
@@ -152,10 +109,8 @@ class PortfolioBase:
         """
         Stores essential details from the provided asset returns DataFrame.
 
-        Parameters:
-        -----------
-        returns_assets : pd.DataFrame
-            DataFrame containing the returns of assets.
+        Args:
+            returns_assets (pd.DataFrame): DataFrame containing the returns of assets.
         """
 
         self.asset_list = list(returns_assets.columns)
@@ -170,9 +125,7 @@ class PortfolioBase:
         Returns a string representation of the portfolio, summarizing its key attributes.
 
         Returns:
-        --------
-        str
-            Summary of the portfolio's attributes.
+            str: Summary of the portfolio's attributes.
         """
 
         summary = f"Portfolio: {self.name}\n"

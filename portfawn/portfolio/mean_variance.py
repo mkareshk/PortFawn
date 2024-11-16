@@ -11,22 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class MeanVariancePortfolio(PortfolioBase):
-    """
-    Represents a portfolio optimized using the Mean-Variance optimization approach.
-
-    This class leverages a specified risk model and optimization model to generate
-    an optimal portfolio allocation. If no models are provided, default instances
-    of `MeanVarianceRiskModel` and `OptimizationModel` are used.
-
-    Attributes:
-    -----------
-    asset_list : list
-        List of asset names available in the portfolio.
-    asset_weights : dict
-        Dictionary of assets and their corresponding optimized weights.
-    _w : np.ndarray
-        Array of optimized weights assigned to assets.
-    """
 
     def __init__(
         self,
@@ -39,21 +23,15 @@ class MeanVariancePortfolio(PortfolioBase):
         """
         Initializes the MeanVariancePortfolio with the given parameters.
 
-        Parameters:
-        -----------
-        name : str, optional
-            Name of the portfolio. Default is "mean_variance_portfolio".
-        risk_model : MeanVarianceRiskModel, optional
-            The risk model used to evaluate the asset returns. If None, a default
-            `MeanVarianceRiskModel` instance is created.
-        optimization_model : OptimizationModel, optional
-            The optimization model used to calculate optimal weights. If None,
-            a default `OptimizationModel` instance is created with "MSRP" as the
-            objective.
-        rf_asset : str, optional
-            The symbol representing the risk-free asset. Default is "BND".
-        benchmark_asset : str, optional
-            The symbol representing the benchmark asset. Default is "SPY".
+        Args:
+            name (str, optional): Name of the portfolio. Defaults to "mean_variance_portfolio".
+            risk_model (MeanVarianceRiskModel, optional): The risk model used to evaluate the
+                asset returns. If None, a default `MeanVarianceRiskModel` instance is created.
+            optimization_model (OptimizationModel, optional): The optimization model used to
+                calculate optimal weights. If None, a default `OptimizationModel` instance is
+                created with "MSRP" as the objective.
+            rf_asset (str, optional): The symbol representing the risk-free asset. Defaults to "BND".
+            benchmark_asset (str, optional): The symbol representing the benchmark asset. Defaults to "SPY".
         """
 
         if risk_model is None:
@@ -74,21 +52,15 @@ class MeanVariancePortfolio(PortfolioBase):
         specified risk model and then calculates optimal weights using the optimization
         model. The resulting weights are normalized to sum to 1.
 
-        Parameters:
-        -----------
-        returns_assets : pd.DataFrame
-            A DataFrame where rows represent time periods and columns represent
-            asset returns.
+        Args:
+            returns_assets (pd.DataFrame): A DataFrame where rows represent time periods
+                and columns represent asset returns.
 
         Returns:
-        --------
-        MeanVariancePortfolio
-            Returns the instance of the `MeanVariancePortfolio` class.
+            MeanVariancePortfolio: The instance of the `MeanVariancePortfolio` class.
 
         Raises:
-        -------
-        ValueError
-            If optimization fails or if the resulting weights do not sum to 1.
+            ValueError: If optimization fails or if the resulting weights do not sum to 1.
         """
 
         # Store essential details from the asset returns
