@@ -112,7 +112,6 @@ class PortfolioBase:
         Args:
             returns_assets (pd.DataFrame): DataFrame containing the returns of assets.
         """
-
         self.asset_list = list(returns_assets.columns)
         self.date_start = returns_assets.index[0]
         self.date_end = returns_assets.index[-1]

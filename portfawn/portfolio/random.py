@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class RandomPortfolio(PortfolioBase):
 
-    def __init__(self, name: str = "random_portfolio") -> None:
+    def __init__(self, name: str = "Randomly Weighted Portfolio") -> None:
         """
         Initializes the RandomPortfolio with a given name.
 

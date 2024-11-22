@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class EquallyWeightedPortfolio(PortfolioBase):
 
-    def __init__(self, name: str = "equally_weighted_portfolio") -> None:
+    def __init__(self, name: str = "Equally Weighted Portfolio") -> None:
         """
         Initializes the EquallyWeightedPortfolio with a given name.
 
