@@ -82,18 +82,18 @@ returns_data = dafin.ReturnsData(asset_list).get_returns(date_start, date_end)
 
 #### 3. Create and Configure Portfolios
 ```python
-# Create portfolios with different optimization objectives
 portfolio_list = [
     RandomPortfolio(),
     EquallyWeightedPortfolio(),
-    MeanVariancePortfolio(name="MSRP", optimization_model=OptimizationModel(objective="MSRP")),  # Maximize Sharpe ratio
-    MeanVariancePortfolio(name="BMOP", optimization_model=OptimizationModel(objective="BMOP")),  # Quantum-based binary optimization
+    MeanVariancePortfolio(name="Minimum Variance Portfolio", optimization_model=OptimizationModel(objective="MVP")),
+    MeanVariancePortfolio(name="Maximum Return Portfolio", optimization_model=OptimizationModel(objective="MRP")),
+    MeanVariancePortfolio(name="Maximum Sharpe Ratio Portfolio", optimization_model=OptimizationModel(objective="MSRP")),
+    MeanVariancePortfolio(name="Binary Multi-Objective Portfolio", optimization_model=OptimizationModel(objective="BMOP")),
 ]
 ```
 
 #### 4. Run Backtesting
 ```python
-# Backtest portfolios
 backtest = BackTest(
     portfolio_list=portfolio_list,
     asset_list=asset_list,
@@ -107,23 +107,38 @@ backtest.run()
 ```
 
 #### 5. Visualize and Save Results
-```python
-# Generate and save visualizations
-fig, ax = backtest.plot_returns()
-plt.savefig("plot_returns.png")
 
+```python
 fig, ax = backtest.plot_cum_returns()
 plt.savefig("plot_cum_returns.png")
+```
+<img src="assets/plot_cum_returns.png" alt="Description" width="700" />
 
+
+```python
 fig, ax = backtest.plot_dist_returns()
 plt.savefig("plot_dist_returns.png")
+```
+<img src="assets/plot_dist_returns.png" alt="Description" width="700" />
 
+
+```python
 fig, ax = backtest.plot_corr()
 plt.savefig("plot_corr.png")
+```
+<img src="assets/plot_corr.png" alt="Description" width="700" />
 
+
+```python
 fig, ax = backtest.plot_cov()
 plt.savefig("plot_cov.png")
 ```
+<img src="assets/plot_cov.png" alt="Description" width="700" />
+
+
+## Demo
+
+Check out the demos in `demo/`.
 
 
 ## Contributing
