@@ -141,11 +141,6 @@ plt.savefig("plot_cov.png")
 Check out the demos in `demo/`.
 
 
-## Contributing
-
-Refer to the [contribution guidelines](CONTRIBUTING.md) for more information.
-
-
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
