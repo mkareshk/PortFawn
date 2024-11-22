@@ -121,7 +121,7 @@ class Plot:
             locs, labels = plt.yticks()
             plt.yticks(locs, labels)
 
-        plt.xticks(rotation=90)
+        plt.xticks(rotation=45)
         plt.yticks(rotation=0)
         plt.title(title)
         fig.tight_layout()
