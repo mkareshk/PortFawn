@@ -262,3 +262,4 @@ results/
 *.pdf
 *.csv
 *.pkl
+.cache

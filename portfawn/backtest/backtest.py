@@ -1,14 +1,37 @@
-import time
 import logging
+import time
 
+import dafin
 import pandas as pd
 from joblib import Parallel, delayed
-from portfawn.plot import Plot
+
+from ..plot import Plot
+
+logger = logging.getLogger(__name__)
 
 
 class BackTest:
+    """
+    A class to perform backtesting of financial portfolios.
+
+    Attributes:
+        plot (Plot): An instance of the `Plot` class for generating visualizations.
+        logger (logging.Logger): Logger for logging messages and errors.
+        portfolio_list (list): List of portfolio objects to backtest.
+        asset_list (list): List of asset identifiers to analyze.
+        date_start (str): The start date for the backtesting period (YYYY-MM-DD).
+        date_end (str): The end date for the backtesting period (YYYY-MM-DD).
+        fitting_days (int): Number of days used for training the portfolio.
+        evaluation_days (int): Number of days used for evaluating the portfolio.
+        n_jobs (int): Number of parallel jobs to run (1 for sequential processing).
+        analysis_range (DatetimeIndex): Dates defining the evaluation windows.
+        analysis_windows (list): List of tuples defining training and testing periods.
+        asset_returns (ReturnsData): Data object for retrieving asset returns.
+        returns (DataFrame): Average daily returns of portfolios.
+        cum_returns (DataFrame): Cumulative returns of portfolios.
+    """
+
     plot = Plot()
-    logger = logging.getLogger(__name__)
 
     def __init__(
         self,
@@ -20,6 +43,18 @@ class BackTest:
         evaluation_days,
         n_jobs,
     ):
+        """
+        Initializes the BackTest object with the given parameters.
+
+        Args:
+            portfolio_list (list): List of portfolio objects to evaluate.
+            asset_list (list): List of asset identifiers for analysis.
+            date_start (str): Start date for backtesting (YYYY-MM-DD).
+            date_end (str): End date for backtesting (YYYY-MM-DD).
+            fitting_days (int): Days for training the portfolio model.
+            evaluation_days (int): Days for evaluating portfolio performance.
+            n_jobs (int): Number of parallel jobs to run (1 for sequential).
+        """
 
         self.portfolio_list = portfolio_list
         self.asset_list = asset_list
@@ -45,7 +80,19 @@ class BackTest:
             for i in self.analysis_range
         ]
 
+        # retrieve asset returns
+        self.asset_returns = dafin.ReturnsData(self.asset_list)
+
     def run(self):
+        """
+        Executes the backtesting process.
+
+        Generates performance metrics for each portfolio over the defined
+        analysis windows, either sequentially or in parallel.
+
+        Returns:
+            None
+        """
 
         backtesting_instances = [
             dict(
@@ -74,13 +121,12 @@ class BackTest:
         # performance
 
         # returns
-        total_returns_list = [p["total_returns"] for p in performance_backtesting]
-        rolling_total_returns = pd.concat(total_returns_list, axis=1).T
-        self.returns = rolling_total_returns.groupby(
-            by=rolling_total_returns.index
-        ).max()
+        total_returns_list = [p["returns_total"] for p in performance_backtesting]
 
-        # cumulative returns
+        rolling_total_returns = pd.concat(total_returns_list, axis=1).T
+        self.returns = rolling_total_returns.groupby(rolling_total_returns.index).mean()
+        self.returns.sort_index(inplace=True)
+
         self.cum_returns = (self.returns + 1).cumprod() - 1
 
     def run_iter(
@@ -91,91 +137,137 @@ class BackTest:
         date_start_testing,
         date_end_testing,
     ):
+        """
+        Executes a single iteration of the backtesting process for a portfolio.
 
+        Args:
+            portfolio: The portfolio object to backtest.
+            date_start_training (datetime.date): Start date of the training period.
+            date_end_training (datetime.date): End date of the training period.
+            date_start_testing (datetime.date): Start date of the testing period.
+            date_end_testing (datetime.date): End date of the testing period.
+
+        Returns:
+            dict: Performance metrics for the backtested portfolio.
+        """
+
+        training_returns = self.asset_returns.get_returns(
+            date_start=date_start_training, date_end=date_end_training
+        )
+        evaluation_returns = self.asset_returns.get_returns(
+            date_start=date_start_testing, date_end=date_end_testing
+        )
         # training
         t0 = time.time()
 
-        portfolio.fit(
-            asset_list=self.asset_list,
-            date_start=date_start_training,
-            date_end=date_end_training,
-        )
+        try:
+            portfolio.fit(training_returns)
+        except Exception as e:
+            logger.error(f"Error training portfolio {portfolio.name}: {e}")
+            return None
 
         fitting_time = time.time() - t0
-        self.logger.info(
-            f"Trained {portfolio.name} portfolio from {date_start_training}"
-            f" to {date_end_training} in {fitting_time} seconds"
+
+        logger.info(
+            f"Trained {portfolio.name} portfolio from {date_start_training} "
+            f"to {date_end_training} in {fitting_time:.2f} seconds"
         )
 
         # evaluation
         t0 = time.time()
-
-        performance = portfolio.evaluate(
-            date_start=date_start_testing, date_end=date_end_testing
-        )
-
+        returns_total = portfolio.evaluate(evaluation_returns).returns_total
         evaluation_time = time.time() - t0
-        self.logger.info(
-            f"Tested {portfolio.name} portoflio from {date_start_testing} to {date_end_testing}"
+
+        logger.info(
+            f"Tested {portfolio.name} portfolio from {date_start_testing} to {date_end_testing}"
             f" in {evaluation_time} seconds"
         )
 
-        performance.update(
-            {
-                "fitting_time": fitting_time,
-                "evaluation_time": evaluation_time,
-                "date": date_start_testing,
-            }
-        )
+        # portfolio performance
+        performance = {
+            "fitting_time": fitting_time,
+            "evaluation_time": evaluation_time,
+            "date": date_start_testing,
+            "returns_total": returns_total,
+        }
 
         return performance
 
     def plot_returns(self):
+        """
+        Plots average daily returns of portfolios.
+
+        Returns:
+            tuple: Figure and axis objects for the plot.
+        """
+
         fig, ax = self.plot.plot_trend(
             df=self.returns,
-            title="",
+            title="Average Daily Returns of Portfolios",
             xlabel="Date",
             ylabel="Returns",
-            asset_list=self.asset_list,
-            portfolio_list=[p.objective for p in self.portfolio_list],
+            portfolio_list=[p.name for p in self.portfolio_list],
         )
         return fig, ax
 
     def plot_cum_returns(self):
+        """
+        Plots cumulative returns of portfolios.
+
+        Returns:
+            tuple: Figure and axis objects for the plot.
+        """
         fig, ax = self.plot.plot_trend(
             df=self.cum_returns,
-            title="",
+            title="Cumulative Returns of Portfolios",
             xlabel="Date",
             ylabel="Returns",
-            asset_list=self.asset_list,
-            portfolio_list=[p.objective for p in self.portfolio_list],
+            portfolio_list=[p.name for p in self.portfolio_list],
         )
         return fig, ax
 
     def plot_dist_returns(self):
+        """
+        Plots a boxplot of the distribution of daily returns.
 
+        Returns:
+            tuple: Figure and axis objects for the plot.
+        """
         fig, ax = self.plot.plot_box(
             df=self.returns,
-            title="",
-            xlabel="Portfolio Fitness",
+            title="Distribution of Daily Returns",
+            xlabel="Portfolio",
             ylabel="Daily Returns (%)",
         )
         return fig, ax
 
     def plot_corr(self):
+        """
+        Plots a heatmap of return correlations between portfolios.
+
+        Returns:
+            tuple: Figure and axis objects for the plot.
+        """
         fig, ax = self.plot.plot_heatmap(
             df=self.returns,
             relation_type="corr",
-            title="",
+            title="Correlations Between Portfolios",
             annotate=True,
         )
         return fig, ax
 
     def plot_cov(self):
+        """
+        Plots a heatmap of return covariances between portfolios.
+
+        Returns:
+            tuple: Figure and axis objects for the plot.
+        """
+
         fig, ax = self.plot.plot_heatmap(
             df=self.returns,
             relation_type="cov",
-            title="",
+            title="Covariances Between pPortfolios",
             annotate=True,
         )
         return fig, ax

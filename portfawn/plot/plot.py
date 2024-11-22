@@ -1,12 +1,12 @@
 import logging
 
+import matplotlib.pylab as pylab
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.pylab as pylab
 import seaborn as sns
-from scipy.spatial import ConvexHull
 from matplotlib.ticker import FormatStrFormatter
+from scipy.spatial import ConvexHull
 
 sns.set()
 sns.set_style("whitegrid")
@@ -30,7 +30,6 @@ pylab.rcParams.update(params)
 
 class Plot:
     def __init__(self):
-
         # log
         self.logger = logging.getLogger(__name__)
 
@@ -86,7 +85,6 @@ class Plot:
     def plot_heatmap(
         self, df, relation_type, title="", annotate=True, figsize=DEFAULT_SIZE
     ):
-
         fig, ax = plt.subplots(figsize=figsize)
 
         if relation_type == "corr":
@@ -123,7 +121,7 @@ class Plot:
             locs, labels = plt.yticks()
             plt.yticks(locs, labels)
 
-        plt.xticks(rotation=90)
+        plt.xticks(rotation=45)
         plt.yticks(rotation=0)
         plt.title(title)
         fig.tight_layout()
