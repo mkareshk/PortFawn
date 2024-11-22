@@ -26,7 +26,7 @@ def test_quantum_model_initialization(objective, backend, expected_exception):
     "objective, scipy_params, expected_exception",
     [
         ("MRP", {"maxiter": 1000}, None),
-        ("InvalidObjective", {"maxiter": 1000}, NotImplementedError),
+        ("InvalidObjective", {"maxiter": 1000}, ValueError),
     ],
 )
 def test_classic_model_initialization(objective, scipy_params, expected_exception):
