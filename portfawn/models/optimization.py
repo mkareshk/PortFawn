@@ -4,6 +4,13 @@ import numpy as np
 import scipy.optimize as sco
 from dwave.system import DWaveCliqueSampler
 
+from .utils import (
+    annual_to_daily_return,
+    annual_to_daily_volatility,
+    validate_and_update_target_return,
+    validate_and_update_target_sd,
+)
+
 
 class QuantumOptModel:
 
@@ -96,16 +103,15 @@ class QuantumOptModel:
 
 
 class ClassicOptModel:
-
     def __init__(
         self,
-        objective,
-        risk_free_rate=0.0,
-        scipy_params: dict = {"maxiter": 1000, "disp": False, "ftol": 1e-10},
-        target_return: float = 0.2,
-        target_sd: float = 0.2,
-        weight_bound: tuple = (0.0, 1.0),
-        init_point=None,
+        objective: str,
+        risk_free_rate: float = 0.0,
+        scipy_params: dict = None,
+        target_return: float = 0.1,
+        target_sd: float = 0.1,
+        weight_bounds: list = None,
+        init_point: np.array = None,
     ) -> None:
         """
         Initialize the ClassicOptModel with specified parameters.
@@ -113,25 +119,28 @@ class ClassicOptModel:
         Args:
             objective (str): The optimization objective. Must be one of "MRP", "MVP", or "MSRP".
             risk_free_rate (float): The risk-free rate for optimization. Defaults to 0.0.
-            scipy_params (dict): Parameters for the scipy optimizer. Defaults to {"maxiter": 1000, "disp": False, "ftol": 1e-10}.
-            target_return (float): The target portfolio return. Defaults to 0.2.
-            target_sd (float): The target portfolio standard deviation. Defaults to 0.2.
-            weight_bound (tuple): Bounds for individual weights as (min, max). Defaults to (0.0, 1.0).
+            scipy_params (dict): Parameters for the scipy optimizer. Defaults to {"maxiter": 1000, "disp": False, "ftol": 1e-8}.
+            target_return (float): The annual target portfolio return. Defaults to 0.1.
+            target_sd (float): The annual target portfolio standard deviation. Defaults to0.1.
+            weight_bounds (list): List of tuples specifying (min, max) bounds for each asset. Defaults to (0.0, 1.0) for all assets.
             init_point (np.array): Initial guess for the optimizer. Defaults to None (uniform allocation).
 
         Raises:
-            NotImplementedError: If the specified objective is unsupported.
+            ValueError: If an unsupported objective is provided.
         """
-
         if objective not in ["MRP", "MVP", "MSRP"]:
-            raise NotImplementedError(f"Objective '{objective}' not supported.")
+            raise ValueError(f"Objective '{objective}' not supported.")
 
         self._objective = objective
         self._risk_free_rate = risk_free_rate
-        self._scipy_params = scipy_params
-        self._target_return = target_return
-        self._target_sd = target_sd
-        self._weight_bound = weight_bound
+        self._scipy_params = scipy_params or {
+            "maxiter": 1000,
+            "disp": False,
+            "ftol": 1e-8,
+        }
+        self._target_return = annual_to_daily_return(target_return)
+        self._target_sd = annual_to_daily_volatility(target_sd)
+        self._weight_bounds = weight_bounds or [(0.0, 1.0)]
         self._init_point = init_point
 
     def optimize(self, linear_biases: np.array, quadratic_biases: np.array) -> np.array:
@@ -149,54 +158,68 @@ class ClassicOptModel:
             ValueError: If the optimization fails or the sum of weights is zero.
 
         Notes:
-            - For "MRP" (Mean Return Portfolio), the objective is to minimize variance while achieving the target risk.
-            - For "MVP" (Minimum Variance Portfolio), the objective is to minimize variance while keeping return below the target.
-            - For "MSRP" (Maximum Sharpe Ratio Portfolio), the objective is to maximize the Sharpe ratio.
+            - "MRP" (Maximum Return Portfolio) maximizes return while keeping risk below a target.
+            - "MVP" (Minimum Variance Portfolio) minimizes risk while achieving at least the target return.
+            - "MSRP" (Maximum Sharpe Ratio Portfolio) maximizes the Sharpe ratio.
         """
 
         asset_num = len(linear_biases)
-        weight_bounds = tuple(self._weight_bound for _ in range(asset_num))
 
-        # Constraint: weights sum to 1
+        # Validate and update target return and standard deviation
+        target_sd = validate_and_update_target_sd(self._target_sd, quadratic_biases)
+        target_return = validate_and_update_target_return(
+            self._target_return, linear_biases
+        )
+
+        # If uniform bounds, apply to all assets
+        if len(self._weight_bounds) == 1:
+            weight_bounds = self._weight_bounds * asset_num
+        elif len(self._weight_bounds) != asset_num:
+            raise ValueError(
+                f"Length of weight_bounds must match the number of assets ({(self._weight_bounds)} != {asset_num})."
+            )
+
+        # Constraint: Weights sum to 1
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
         if self._objective == "MRP":
+            # Add inequality constraint to ensure portfolio variance is below target risk
             constraints.append(
                 {
                     "type": "ineq",
-                    "fun": lambda w: w.T.dot(linear_biases) - self._target_return,
+                    "fun": lambda w: target_sd
+                    - np.sqrt(w.T.dot(quadratic_biases).dot(w)),
                 }
             )
 
             def cost_function(w):
-                return -linear_biases.dot(w)
+                return -linear_biases.dot(w)  # Maximize return
 
         elif self._objective == "MVP":
+            # Add inequality constraint to ensure portfolio return is at least the target return
             constraints.append(
                 {
                     "type": "ineq",
-                    "fun": lambda w: self._target_sd - linear_biases.dot(w),
+                    "fun": lambda w: w.T.dot(linear_biases) - target_return,
                 }
             )
 
             def cost_function(w):
-                return np.sqrt(w.T.dot(quadratic_biases).dot(w))
+                return w.T.dot(quadratic_biases).dot(w)  # Minimize variance
 
         elif self._objective == "MSRP":
 
             def cost_function(w):
                 portfolio_return = linear_biases.dot(w)
                 portfolio_variance = w.T.dot(quadratic_biases).dot(w)
-                if portfolio_variance == 0:
+                if portfolio_variance <= 1e-8:  # Handle near-zero variance gracefully
                     return np.inf
                 sharpe_ratio = (portfolio_return - self._risk_free_rate) / np.sqrt(
                     portfolio_variance
                 )
-                return -sharpe_ratio
+                return -sharpe_ratio  # Maximize Sharpe ratio
 
-        else:
-            raise NotImplementedError
-
+        # Initialize weights
         init_point = (
             self._init_point
             if self._init_point is not None
@@ -216,12 +239,34 @@ class ClassicOptModel:
             w = result.x
             total_weight = np.sum(w)
             if total_weight > 0:
-                w = w / total_weight
+                return (w / total_weight).reshape(-1, 1)  # Normalize weights
             else:
                 raise ValueError("Sum of weights is zero; cannot normalize.")
-            return w.reshape(asset_num, 1)
         else:
             raise ValueError(f"Optimization failed: {result.message}")
+
+    def _generate_random_init_point(self, asset_num: int) -> np.array:
+        """
+        Generate a random initial point that satisfies the constraints.
+
+        Args:
+            asset_num (int): Number of assets.
+
+        Returns:
+            np.array: Randomly generated initial weights.
+        """
+        bounds = self._weight_bounds
+        lower_bounds, upper_bounds = zip(*bounds)
+
+        # Generate random weights within bounds
+        random_weights = np.random.uniform(
+            low=lower_bounds, high=upper_bounds, size=asset_num
+        )
+
+        # Normalize weights to sum to 1
+        normalized_weights = random_weights / np.sum(random_weights)
+
+        return normalized_weights
 
 
 class OptimizationModel:
@@ -241,27 +286,33 @@ class OptimizationModel:
                 If None, default parameters for both quantum and classical backends will be used.
                 Example parameters include:
                 - Quantum: {"backend": "neal", "annealing_time": 100, "num_reads": 1000, "num_sweeps": 10000}.
-                - Classical: {"maxiter": 1000, "disp": False, "ftol": 1e-10, "weight_bound": (0.0, 1.0)}.
+                - Classical: {"maxiter": 1000, "disp": False, "ftol": 1e-10, "weight_bounds": [(0.0, 1.0)]}.
             risk_free_rate (float): The risk-free rate. Defaults to 0.0.
 
         Raises:
             NotImplementedError: If the specified objective is unsupported.
         """
 
-        if optimization_params is None:
-            optimization_params = {
-                "maxiter": 1000,
-                "disp": False,
-                "ftol": 1e-10,
-                "backend": "neal",
-                "annealing_time": 100,
-                "num_reads": 1000,
-                "num_sweeps": 10000,
-                "weight_bound": (0.0, 1.0),
-                "target_return": 0.15,
-                "target_sd": 0.1,
-                "init_point": None,
-            }
+        default_optimization_params = {
+            "maxiter": 1000,
+            "disp": False,
+            "ftol": 1e-8,
+            "backend": "neal",
+            "annealing_time": 100,
+            "num_reads": 1000,
+            "num_sweeps": 10000,
+            "weight_bounds": [(0.0, 1.0)],
+            "target_return": 0.08,
+            "target_sd": 0.08,
+            "init_point": None,
+        }
+        if not optimization_params:
+            optimization_params = default_optimization_params
+        else:
+            for k, v in default_optimization_params.items():
+                if k not in optimization_params:
+                    optimization_params[k] = v
+
         self.objective = objective
         self.optimization_params = optimization_params
         self.risk_free_rate = risk_free_rate
@@ -284,10 +335,9 @@ class OptimizationModel:
                 objective=self.objective,
                 risk_free_rate=self.risk_free_rate,
                 scipy_params=scipy_params,
-                target_return=self.optimization_params.get("target_return", 0.15),
-                target_sd=self.optimization_params.get("target_sd", 0.1),
-                weight_bound=self.optimization_params.get("weight_bound", (0.0, 1.0)),
-                init_point=self.optimization_params.get("init_point", None),
+                target_return=self.optimization_params["target_return"],
+                target_sd=self.optimization_params["target_sd"],
+                weight_bounds=self.optimization_params["weight_bounds"],
             )
         else:
             raise NotImplementedError(f"Objective '{self.objective}' not supported.")
