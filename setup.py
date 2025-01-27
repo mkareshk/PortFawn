@@ -6,7 +6,7 @@ with open("README.md", "r") as file:
 
 setuptools.setup(
     name="PortFawn",
-    version="0.0.1",
+    version="0.0.3",
     author="Moein Kareshk",
     author_email="mkareshk@outlook.com",
     description="Portfolio Optimization",
@@ -23,10 +23,11 @@ setuptools.setup(
         "scikit-learn",
         "seaborn",
         "dafin>=0.0.3",
+        "dwave-system>=1.25.0",
+        "dwave-neal>=0.6.0",
     ],
     python_requires=">=3.10",
     extras_require={
-        "quantum": ["dwave-system>=1.25.0", "dwave-neal>=0.6.0"],
         "dev": [
             "pre-commit",
             "pytest",

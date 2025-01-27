@@ -267,7 +267,7 @@ class BackTest:
         fig, ax = self.plot.plot_heatmap(
             df=self.returns,
             relation_type="cov",
-            title="Covariances Between pPortfolios",
+            title="Covariances Between Portfolios",
             annotate=True,
         )
         return fig, ax
