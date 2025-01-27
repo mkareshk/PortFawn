@@ -38,18 +38,9 @@ Portfawn provides a unified API for both classical and quantum optimization, mak
 
 You can install Portfawn and its dependencies in a single command:
 
-- **Basic installation** (classical optimization only):
-  ```bash
-  pip install portfawn
-  ```
-
-- **With quantum optimization support**:
-  ```bash
-  pip install portfawn"[quantum]"
-  ```
-
-This modular installation ensures you only install what you need!
-
+```bash
+pip install portfawn
+```
 
 ## Getting Started
 
